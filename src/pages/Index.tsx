@@ -3,7 +3,7 @@ import { Language } from '@/types/document';
 import { Header } from '@/components/Header';
 import { HeroBanner } from '@/components/HeroBanner';
 import { ToolGrid } from '@/components/ToolGrid';
-import { PdfTools } from '@/components/tools/PdfTools';
+import { PdfTools, PdfToolMode } from '@/components/tools/PdfTools';
 import { ResumeBuilder } from '@/components/tools/ResumeBuilder';
 import { Translator } from '@/components/tools/Translator';
 import { LetterWriter } from '@/components/tools/LetterWriter';
@@ -22,6 +22,35 @@ const Index = () => {
   const handleBackToHome = () => {
     setActiveTool(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPdfToolMode = (toolId: string): PdfToolMode => {
+    switch (toolId) {
+      case 'pdf-to-word': return 'pdf-to-word';
+      case 'word-to-pdf': return 'word-to-pdf';
+      case 'excel-to-pdf': return 'excel-to-pdf';
+      case 'ppt-to-pdf': return 'ppt-to-pdf';
+      case 'img-to-pdf': return 'img-to-pdf';
+      case 'merge-pdf': return 'merge';
+      case 'split-pdf': return 'split';
+      case 'compress-pdf': return 'compress';
+      default: return 'pdf-to-word';
+    }
+  };
+
+  const isPdfTool = (toolId: string | null) => {
+    if (!toolId) return false;
+    return [
+      'pdf-to-word',
+      'word-to-pdf',
+      'excel-to-pdf',
+      'ppt-to-pdf',
+      'img-to-pdf',
+      'merge-pdf',
+      'split-pdf',
+      'compress-pdf',
+      'pdf'
+    ].includes(toolId);
   };
 
   return (
@@ -48,12 +77,18 @@ const Index = () => {
           </>
         ) : (
           <div className="py-6">
-            {activeTool === 'pdf' && <PdfTools lang={lang} onBack={handleBackToHome} />}
+            {isPdfTool(activeTool) && (
+              <PdfTools 
+                lang={lang} 
+                initialMode={getPdfToolMode(activeTool!)} 
+                onBack={handleBackToHome} 
+              />
+            )}
+            {activeTool === 'ocr' && <OcrExtractor lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'resume' && <ResumeBuilder lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'translate' && <Translator lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'letter' && <LetterWriter lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'govt' && <GovtFormAssistant lang={lang} onBack={handleBackToHome} />}
-            {activeTool === 'ocr' && <OcrExtractor lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'signature' && <SignatureCreator lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'templates' && <DocTemplates lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'excel' && <ExcelAssistant lang={lang} onBack={handleBackToHome} />}
@@ -67,7 +102,7 @@ const Index = () => {
             {lang === 'hi' ? 'मेरा डॉक्यूमेंट (Mera Document) • भारत का अपना AI प्लेटफार्म' : 'Mera Document • India’s AI Document Platform'}
           </p>
           <p className="mb-4">
-            {lang === 'hi' ? 'सभी 10 टूल 100% सुरक्षित और मुफ्त हैं' : 'All 10 tools are 100% free and private'}
+            {lang === 'hi' ? 'सभी टूल 100% सुरक्षित और मुफ्त हैं' : 'All tools are 100% free and private'}
           </p>
           <MadeWithDyad />
         </div>

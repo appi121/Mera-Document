@@ -1,20 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Language } from '@/types/document';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { showSuccess, showError } from '@/utils/toast';
-import { FileUp, Minimize2, Layers, FileImage, Download, ArrowLeft, CheckCircle } from 'lucide-react';
+import { 
+  FileUp, 
+  Minimize2, 
+  Layers, 
+  FileImage, 
+  Download, 
+  ArrowLeft, 
+  CheckCircle,
+  FileText,
+  FileSpreadsheet,
+  Presentation,
+  Scissors
+} from 'lucide-react';
+
+export type PdfToolMode = 
+  | 'pdf-to-word' 
+  | 'word-to-pdf' 
+  | 'excel-to-pdf' 
+  | 'ppt-to-pdf' 
+  | 'img-to-pdf' 
+  | 'merge' 
+  | 'split' 
+  | 'compress';
 
 interface PdfToolsProps {
   lang: Language;
+  initialMode?: PdfToolMode;
   onBack: () => void;
 }
 
-export const PdfTools: React.FC<PdfToolsProps> = ({ lang, onBack }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'merge' | 'compress' | 'imgToPdf'>('merge');
+export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-word', onBack }) => {
+  const [activeSubTab, setActiveSubTab] = useState<PdfToolMode>(initialMode);
   const [files, setFiles] = useState<File[]>([]);
   const [processing, setProcessing] = useState(false);
   const [completed, setCompleted] = useState(false);
+
+  useEffect(() => {
+    setActiveSubTab(initialMode);
+  }, [initialMode]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -32,12 +59,25 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, onBack }) => {
     setTimeout(() => {
       setProcessing(false);
       setCompleted(true);
-      showSuccess(lang === 'hi' ? 'आपकी PDF फ़ाइल तैयार है!' : 'Your PDF file is ready!');
+      showSuccess(lang === 'hi' ? 'आपकी फ़ाइल तैयार है!' : 'Your converted file is ready!');
     }, 1500);
   };
 
+  const tabs: { id: PdfToolMode; titleHi: string; titleEn: string; icon: React.ReactNode; accept: string; isMultiple?: boolean }[] = [
+    { id: 'pdf-to-word', titleHi: 'PDF to Word', titleEn: 'PDF to Word', icon: <FileText className="w-4 h-4" />, accept: '.pdf' },
+    { id: 'word-to-pdf', titleHi: 'Word to PDF', titleEn: 'Word to PDF', icon: <FileText className="w-4 h-4" />, accept: '.doc,.docx' },
+    { id: 'excel-to-pdf', titleHi: 'Excel to PDF', titleEn: 'Excel to PDF', icon: <FileSpreadsheet className="w-4 h-4" />, accept: '.xls,.xlsx' },
+    { id: 'ppt-to-pdf', titleHi: 'PPT to PDF', titleEn: 'PPT to PDF', icon: <Presentation className="w-4 h-4" />, accept: '.ppt,.pptx' },
+    { id: 'img-to-pdf', titleHi: 'Image to PDF', titleEn: 'Image to PDF', icon: <FileImage className="w-4 h-4" />, accept: 'image/*', isMultiple: true },
+    { id: 'merge', titleHi: 'Merge PDF', titleEn: 'Merge PDF', icon: <Layers className="w-4 h-4" />, accept: '.pdf', isMultiple: true },
+    { id: 'split', titleHi: 'Split PDF', titleEn: 'Split PDF', icon: <Scissors className="w-4 h-4" />, accept: '.pdf' },
+    { id: 'compress', titleHi: 'Compress PDF', titleEn: 'Compress PDF', icon: <Minimize2 className="w-4 h-4" />, accept: '.pdf' },
+  ];
+
+  const currentTab = tabs.find(t => t.id === activeSubTab) || tabs[0];
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
       <Button variant="ghost" onClick={onBack} className="mb-4 gap-2 text-gray-600 hover:text-gray-900">
         <ArrowLeft className="w-4 h-4" />
         {lang === 'hi' ? 'मुख्य पृष्ठ पर लौटें' : 'Back to Home'}
@@ -46,53 +86,38 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, onBack }) => {
       <Card className="border-orange-200 shadow-md">
         <CardHeader className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-t-lg">
           <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-            📄 {lang === 'hi' ? 'PDF टूल्स सेंटर (PDF Tool Kit)' : 'PDF Tools Center'}
+            📄 {lang === 'hi' ? 'PDF एवं डॉक्यूमेंट कनवर्टर सेंटर' : 'PDF & Document Converter Center'}
           </CardTitle>
           <CardDescription className="text-orange-100 text-sm">
             {lang === 'hi' 
-              ? 'PDF मर्ज करें, साइज छोटा करें (Compress) या फोटो से PDF बनाएं' 
-              : 'Merge PDFs, compress file size, or convert images to PDF'}
+              ? 'PDF to Word, Word to PDF, Excel/PPT, Merge, Split, Compress सब कुछ 100% मुफ्त' 
+              : 'Convert PDF to Word, Word/Excel/PPT to PDF, Merge, Split & Compress - 100% Free'}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="p-6">
-          {/* Sub-tools Tab */}
-          <div className="grid grid-cols-3 gap-2 p-1.5 bg-gray-100 rounded-xl mb-6">
-            <button
-              onClick={() => { setActiveSubTab('merge'); setFiles([]); setCompleted(false); }}
-              className={`py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                activeSubTab === 'merge' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              {lang === 'hi' ? 'PDF मर्ज (जोड़ें)' : 'Merge PDF'}
-            </button>
-            <button
-              onClick={() => { setActiveSubTab('compress'); setFiles([]); setCompleted(false); }}
-              className={`py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                activeSubTab === 'compress' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Minimize2 className="w-4 h-4" />
-              {lang === 'hi' ? 'PDF कंप्रेस (साइज कम)' : 'Compress PDF'}
-            </button>
-            <button
-              onClick={() => { setActiveSubTab('imgToPdf'); setFiles([]); setCompleted(false); }}
-              className={`py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                activeSubTab === 'imgToPdf' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <FileImage className="w-4 h-4" />
-              {lang === 'hi' ? 'फोटो से PDF' : 'Image to PDF'}
-            </button>
+          {/* Sub-tools Tab grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1.5 bg-gray-100 rounded-xl mb-6">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => { setActiveSubTab(tab.id); setFiles([]); setCompleted(false); }}
+                className={`py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  activeSubTab === tab.id ? 'bg-white text-orange-600 shadow-sm border border-orange-200' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {tab.icon}
+                <span>{lang === 'hi' ? tab.titleHi : tab.titleEn}</span>
+              </button>
+            ))}
           </div>
 
           {/* Upload Drop Zone */}
           <div className="border-2 border-dashed border-orange-300 bg-orange-50/40 rounded-2xl p-8 text-center hover:bg-orange-50 transition-colors relative cursor-pointer">
             <input
               type="file"
-              multiple={activeSubTab === 'merge' || activeSubTab === 'imgToPdf'}
-              accept={activeSubTab === 'imgToPdf' ? 'image/*' : '.pdf'}
+              multiple={currentTab.isMultiple}
+              accept={currentTab.accept}
               onChange={handleFileChange}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
@@ -102,7 +127,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, onBack }) => {
             <p className="font-semibold text-gray-800 text-base mb-1">
               {files.length > 0 
                 ? `${files.length} ${lang === 'hi' ? 'फ़ाइल चुनी गई:' : 'Files selected:'}` 
-                : (lang === 'hi' ? 'यहाँ फ़ाइल खींचें या अपलोड करें' : 'Drag & drop files here or click to browse')}
+                : (lang === 'hi' ? `यहाँ ${currentTab.titleHi} फ़ाइल अपलोड करें` : `Upload file for ${currentTab.titleEn}`)}
             </p>
             {files.length > 0 ? (
               <div className="mt-2 text-xs text-orange-700 font-medium max-w-md mx-auto truncate">
@@ -110,7 +135,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, onBack }) => {
               </div>
             ) : (
               <p className="text-xs text-gray-500">
-                {activeSubTab === 'imgToPdf' ? 'JPG, PNG, WEBP Supported' : 'PDF files up to 50MB'}
+                {lang === 'hi' ? 'सुरक्षित एवं सुपर-फास्ट कनवर्टर' : 'Secure & fast conversion'}
               </p>
             )}
           </div>
@@ -126,9 +151,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, onBack }) => {
                 <span>{lang === 'hi' ? 'प्रोसेस हो रहा है...' : 'Processing...'}</span>
               ) : (
                 <span>
-                  {activeSubTab === 'merge' && (lang === 'hi' ? 'PDF जोड़ें (Merge)' : 'Merge Files')}
-                  {activeSubTab === 'compress' && (lang === 'hi' ? 'साइज कम करें' : 'Compress PDF')}
-                  {activeSubTab === 'imgToPdf' && (lang === 'hi' ? 'PDF बनाएं' : 'Convert to PDF')}
+                  {lang === 'hi' ? `${currentTab.titleHi} शुरू करें` : `Start ${currentTab.titleEn}`}
                 </span>
               )}
             </Button>
@@ -141,7 +164,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, onBack }) => {
               >
                 <CheckCircle className="w-4 h-4 text-emerald-600" />
                 <Download className="w-4 h-4" />
-                {lang === 'hi' ? 'डाउनलोड करें (Download PDF)' : 'Download Ready PDF'}
+                {lang === 'hi' ? 'कन्वर्टेड फ़ाइल डाउनलोड करें' : 'Download Converted File'}
               </Button>
             )}
           </div>

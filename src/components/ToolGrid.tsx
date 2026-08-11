@@ -11,8 +11,13 @@ import {
   Camera, 
   FileSignature, 
   CopyCheck, 
-  Briefcase, 
-  Table 
+  Table,
+  FileSpreadsheet,
+  Presentation,
+  FileImage,
+  Layers,
+  Scissors,
+  Minimize2
 } from 'lucide-react';
 
 interface ToolGridProps {
@@ -23,15 +28,95 @@ interface ToolGridProps {
 
 export const toolsData: ToolItem[] = [
   {
-    id: 'pdf',
-    titleHi: '📄 PDF टूल्स (Merge & Compress)',
-    titleEn: '📄 PDF Tools (Merge & Compress)',
-    descHi: 'PDF जोड़ें, साइज कम करें, और इमेज को PDF में बदलें',
-    descEn: 'Merge PDFs, compress size & convert images to PDF',
-    icon: 'pdf',
+    id: 'pdf-to-word',
+    titleHi: '📄 PDF to Word',
+    titleEn: '📄 PDF to Word Converter',
+    descHi: 'PDF फ़ाइल को एडिटेबल Word (DOCX) फ़ाइल में बदलें',
+    descEn: 'Convert PDF files to editable Word (DOCX) document',
+    icon: 'pdf-to-word',
+    category: 'pdf',
+    badgeHi: 'टॉप 1',
+    badgeEn: 'Top #1',
+  },
+  {
+    id: 'word-to-pdf',
+    titleHi: '📝 Word to PDF',
+    titleEn: '📝 Word to PDF Converter',
+    descHi: 'Word (DOC/DOCX) फ़ाइल को तुरंत सुरक्षित PDF में बदलें',
+    descEn: 'Convert Word document to secure high quality PDF',
+    icon: 'word-to-pdf',
     category: 'pdf',
     badgeHi: 'लोकप्रिय',
     badgeEn: 'Popular',
+  },
+  {
+    id: 'excel-to-pdf',
+    titleHi: '📊 Excel to PDF',
+    titleEn: '📊 Excel to PDF Converter',
+    descHi: 'Excel (XLS/XLSX) शीट्स को PDF फॉर्मेट में कन्वर्ट करें',
+    descEn: 'Convert Excel spreadsheets into clean PDF documents',
+    icon: 'excel-to-pdf',
+    category: 'pdf',
+  },
+  {
+    id: 'ppt-to-pdf',
+    titleHi: '🖥️ PPT to PDF',
+    titleEn: '🖥️ PPT to PDF Converter',
+    descHi: 'PowerPoint प्रस्तुति (PPT/PPTX) को आसानी से PDF में बदलें',
+    descEn: 'Convert PowerPoint slides to PDF format easily',
+    icon: 'ppt-to-pdf',
+    category: 'pdf',
+  },
+  {
+    id: 'img-to-pdf',
+    titleHi: '🖼️ Image to PDF',
+    titleEn: '🖼️ Image to PDF Converter',
+    descHi: 'JPG, PNG फोटो से तुरंत 1 क्लिक में PDF बनाएं',
+    descEn: 'Convert JPG, PNG photos into single PDF file',
+    icon: 'img-to-pdf',
+    category: 'pdf',
+    badgeHi: 'सुपर फ़ास्ट',
+    badgeEn: 'Fast',
+  },
+  {
+    id: 'merge-pdf',
+    titleHi: '📚 Merge PDF',
+    titleEn: '📚 Merge PDF Files',
+    descHi: 'कई PDF फ़ाइलों को जोड़कर एक नया PDF बनाएं',
+    descEn: 'Combine multiple PDF files into one single PDF',
+    icon: 'merge-pdf',
+    category: 'pdf',
+  },
+  {
+    id: 'split-pdf',
+    titleHi: '✂️ Split PDF',
+    titleEn: '✂️ Split PDF File',
+    descHi: 'बड़ी PDF के पन्नों को अलग-अलग टुकड़ों में बांटें',
+    descEn: 'Extract or split pages from large PDF document',
+    icon: 'split-pdf',
+    category: 'pdf',
+  },
+  {
+    id: 'compress-pdf',
+    titleHi: '🗜️ Compress PDF',
+    titleEn: '🗜️ Compress PDF Size',
+    descHi: 'PDF का साइज (MB से KB) क्वालिटी बिना घटाए कम करें',
+    descEn: 'Reduce PDF file size without losing quality',
+    icon: 'compress-pdf',
+    category: 'pdf',
+    badgeHi: 'कम साइज',
+    badgeEn: 'Reduce MB',
+  },
+  {
+    id: 'ocr',
+    titleHi: '📷 OCR (फोटो से टेक्स्ट)',
+    titleEn: '📷 OCR Text Extractor',
+    descHi: 'कागज़/फोटो से हिंदी व इंग्लिश टेक्स्ट बाहर निकालें',
+    descEn: 'Extract Hindi & English text from photos & scanned pages',
+    icon: 'ocr',
+    category: 'utilities',
+    badgeHi: 'AI OCR',
+    badgeEn: 'AI OCR',
   },
   {
     id: 'resume',
@@ -41,8 +126,6 @@ export const toolsData: ToolItem[] = [
     descEn: 'Build professional Indian resume in 1 minute',
     icon: 'resume',
     category: 'ai',
-    badgeHi: 'AI स्पीड',
-    badgeEn: 'AI Speed',
   },
   {
     id: 'translate',
@@ -70,17 +153,6 @@ export const toolsData: ToolItem[] = [
     descEn: 'Complete guide & checklist for Indian Govt Forms',
     icon: 'govt',
     category: 'popular',
-    badgeHi: 'उपयोगी',
-    badgeEn: 'Helpful',
-  },
-  {
-    id: 'ocr',
-    titleHi: '📷 OCR (फोटो से टेक्स्ट)',
-    titleEn: '📷 OCR Text Extractor',
-    descHi: 'कागज़ की फोटो खींचकर हिंदी व इंग्लिश टेक्स्ट निकालें',
-    descEn: 'Extract Hindi & English text from photos',
-    icon: 'ocr',
-    category: 'utilities',
   },
   {
     id: 'signature',
@@ -152,12 +224,19 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
-                    {tool.icon === 'pdf' && <FileText className="w-6 h-6" />}
+                    {tool.icon === 'pdf-to-word' && <FileText className="w-6 h-6" />}
+                    {tool.icon === 'word-to-pdf' && <FileText className="w-6 h-6" />}
+                    {tool.icon === 'excel-to-pdf' && <FileSpreadsheet className="w-6 h-6" />}
+                    {tool.icon === 'ppt-to-pdf' && <Presentation className="w-6 h-6" />}
+                    {tool.icon === 'img-to-pdf' && <FileImage className="w-6 h-6" />}
+                    {tool.icon === 'merge-pdf' && <Layers className="w-6 h-6" />}
+                    {tool.icon === 'split-pdf' && <Scissors className="w-6 h-6" />}
+                    {tool.icon === 'compress-pdf' && <Minimize2 className="w-6 h-6" />}
+                    {tool.icon === 'ocr' && <Camera className="w-6 h-6" />}
                     {tool.icon === 'resume' && <UserCheck className="w-6 h-6" />}
                     {tool.icon === 'translate' && <Globe className="w-6 h-6" />}
                     {tool.icon === 'letter' && <PenTool className="w-6 h-6" />}
                     {tool.icon === 'govt' && <Building2 className="w-6 h-6" />}
-                    {tool.icon === 'ocr' && <Camera className="w-6 h-6" />}
                     {tool.icon === 'signature' && <FileSignature className="w-6 h-6" />}
                     {tool.icon === 'templates' && <CopyCheck className="w-6 h-6" />}
                     {tool.icon === 'excel' && <Table className="w-6 h-6" />}
