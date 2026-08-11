@@ -19,6 +19,12 @@ export const SignatureCreator: React.FC<SignatureCreatorProps> = ({ lang, onBack
   const [isDrawing, setIsDrawing] = useState(false);
 
   const fontStyles = [
+    "italic 32px Georgia, serif",
+    "italic 32px 'Courier New', monospace",
+    "bold italic 32px Arial, sans-serif",
+  ];
+
+  const fontClasses = [
     "font-serif italic text-3xl text-slate-800 tracking-wide",
     "font-mono italic text-3xl text-indigo-900",
     "font-sans font-bold italic text-3xl text-blue-900 tracking-widest",
@@ -84,14 +90,33 @@ export const SignatureCreator: React.FC<SignatureCreatorProps> = ({ lang, onBack
   };
 
   const handleDownloadTyped = () => {
-    showSuccess(lang === 'hi' ? 'टाइप किया हुआ सिग्नेचर डाउनलोड हुआ!' : 'Typed signature downloaded!');
+    if (!typedName.trim()) {
+      showError(lang === 'hi' ? 'कृपया अपना नाम दर्ज करें!' : 'Please enter your name!');
+      return;
+    }
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 500;
+    tempCanvas.height = 150;
+    const ctx = tempCanvas.getContext('2d');
+    if (ctx) {
+      ctx.font = fontStyles[selectedStyle] || "italic 32px Georgia, serif";
+      ctx.fillStyle = "#1e293b";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(typedName, tempCanvas.width / 2, tempCanvas.height / 2);
+
+      const link = document.createElement('a');
+      link.download = `signature_${typedName.replace(/\s+/g, '_')}.png`;
+      link.href = tempCanvas.toDataURL('image/png');
+      link.click();
+      showSuccess(lang === 'hi' ? 'सिग्नेचर PNG डाउनलोड हुआ!' : 'Signature PNG downloaded!');
+    }
   };
 
   const handleDownloadDrawn = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    // Check if canvas is empty
     const ctx = canvas.getContext('2d');
     if (ctx) {
       const buffer = new Uint32Array(ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer);
@@ -103,7 +128,7 @@ export const SignatureCreator: React.FC<SignatureCreatorProps> = ({ lang, onBack
 
     const dataUrl = canvas.toDataURL('image/png');
     const link = document.createElement('a');
-    link.download = 'signature.png';
+    link.download = 'digital_signature.png';
     link.href = dataUrl;
     link.click();
     showSuccess(lang === 'hi' ? 'आपका ड्रा किया हुआ सिग्नेचर डाउनलोड हुआ!' : 'Your drawn signature downloaded!');
@@ -196,7 +221,7 @@ export const SignatureCreator: React.FC<SignatureCreatorProps> = ({ lang, onBack
                   {lang === 'hi' ? 'सिग्नेचर स्टाइल चुनें:' : 'Select Signature Style:'}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {fontStyles.map((style, idx) => (
+                  {fontClasses.map((style, idx) => (
                     <div
                       key={idx}
                       onClick={() => setSelectedStyle(idx)}

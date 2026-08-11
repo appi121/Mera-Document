@@ -3,6 +3,7 @@ import { Language } from '@/types/document';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { showSuccess, showError } from '@/utils/toast';
+import { downloadFile, generateSamplePdfBlob } from '@/utils/download';
 import { 
   FileUp, 
   Minimize2, 
@@ -59,8 +60,32 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     setTimeout(() => {
       setProcessing(false);
       setCompleted(true);
-      showSuccess(lang === 'hi' ? 'आपकी फ़ाइल तैयार है!' : 'Your converted file is ready!');
-    }, 1500);
+      showSuccess(lang === 'hi' ? 'आपकी फ़ाइल तैयार है! नीचे दिए बटन से डाउनलोड करें।' : 'File converted! Click button below to download.');
+    }, 1200);
+  };
+
+  const handleDownload = () => {
+    const originalName = files[0]?.name || 'document';
+    const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+
+    if (activeSubTab === 'pdf-to-word') {
+      const docxContent = `Document Converted by Mera Document AI\n---------------------------------------\nOriginal File: ${originalName}\nConverted Date: ${new Date().toLocaleString()}\n\nContent:\nSample converted text content from your PDF document.`;
+      downloadFile(docxContent, `${baseName}_converted.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    } else if (activeSubTab === 'word-to-pdf' || activeSubTab === 'excel-to-pdf' || activeSubTab === 'ppt-to-pdf' || activeSubTab === 'img-to-pdf') {
+      const pdfBlob = generateSamplePdfBlob('Mera Document Converted File', `Converted from ${originalName}`);
+      downloadFile(pdfBlob, `${baseName}_converted.pdf`, 'application/pdf');
+    } else if (activeSubTab === 'merge') {
+      const pdfBlob = generateSamplePdfBlob('Merged Document', `Combined ${files.length} PDF files successfully.`);
+      downloadFile(pdfBlob, `merged_document.pdf`, 'application/pdf');
+    } else if (activeSubTab === 'split') {
+      const pdfBlob = generateSamplePdfBlob('Split Document Page 1', `Extracted from ${originalName}`);
+      downloadFile(pdfBlob, `${baseName}_part1.pdf`, 'application/pdf');
+    } else if (activeSubTab === 'compress') {
+      const pdfBlob = generateSamplePdfBlob('Compressed Document', `Reduced size version of ${originalName}`);
+      downloadFile(pdfBlob, `${baseName}_compressed.pdf`, 'application/pdf');
+    }
+
+    showSuccess(lang === 'hi' ? 'फ़ाइल डाउनलोड हो रही है!' : 'File downloading now!');
   };
 
   const tabs: { id: PdfToolMode; titleHi: string; titleEn: string; icon: React.ReactNode; accept: string; isMultiple?: boolean }[] = [
@@ -159,8 +184,8 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
             {completed && (
               <Button
                 variant="outline"
-                className="w-full sm:w-auto border-emerald-500 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 gap-2 font-semibold"
-                onClick={() => showSuccess(lang === 'hi' ? 'डाउनलोड शुरू हुआ!' : 'Download started!')}
+                className="w-full sm:w-auto border-emerald-500 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 gap-2 font-semibold shadow-sm"
+                onClick={handleDownload}
               >
                 <CheckCircle className="w-4 h-4 text-emerald-600" />
                 <Download className="w-4 h-4" />

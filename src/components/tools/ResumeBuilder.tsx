@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { showSuccess } from '@/utils/toast';
-import { ArrowLeft, Sparkles, Download, User, Briefcase, GraduationCap, Phone } from 'lucide-react';
+import { downloadFile, generateSamplePdfBlob } from '@/utils/download';
+import { ArrowLeft, Sparkles, Download } from 'lucide-react';
 
 interface ResumeBuilderProps {
   lang: Language;
@@ -14,7 +15,6 @@ interface ResumeBuilderProps {
 }
 
 export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ lang, onBack }) => {
-  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: 'राहुल शर्मा',
     role: 'कंप्यूटर ऑपरेटर / डाटा एंट्री',
@@ -27,7 +27,28 @@ export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ lang, onBack }) =>
   });
 
   const handleDownload = () => {
-    showSuccess(lang === 'hi' ? 'रिज्यूमे सफलतापूर्वक डाउनलोड हुआ!' : 'Resume downloaded successfully!');
+    const resumeText = `====================================================
+RESUME / बायोडाटा
+====================================================
+नाम: ${formData.name}
+पद: ${formData.role}
+फोन: ${formData.phone}
+ईमेल: ${formData.email}
+शहर: ${formData.city}
+
+शिक्षा / EDUCATION:
+${formData.education}
+
+अनुभव / WORK EXPERIENCE:
+${formData.experience}
+
+कौशल / SKILLS:
+${formData.skills}
+====================================================`;
+
+    const pdfBlob = generateSamplePdfBlob(`Resume - ${formData.name}`, resumeText);
+    downloadFile(pdfBlob, `${formData.name || 'Resume'}_Biodata.pdf`, 'application/pdf');
+    showSuccess(lang === 'hi' ? 'रिज्यूमे PDF डाउनलोड हुआ!' : 'Resume PDF downloaded!');
   };
 
   return (
