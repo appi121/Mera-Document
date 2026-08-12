@@ -1,5 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { createWorker } from 'tesseract.js';
+import { formatOcrDataWithLayout } from './ocrFormatter';
 
 // Set worker source for PDF.js using unpkg CDN
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
@@ -27,7 +28,17 @@ export const downloadFile = (content: string | Blob, filename: string, mimeType:
 export const downloadWordDoc = (filename: string, textContent: string, title: string = 'Document') => {
   const formattedHtml = textContent
     .split('\n')
-    .map(line => line.trim() ? `<p style="margin-bottom:8pt; font-size:11.0pt; font-family:'Calibri','Segoe UI',sans-serif; color:#111; line-height:1.3;">${line}</p>` : '<br/>')
+    .map(line => {
+      const lineTrimmed = line.trim();
+      if (!lineTrimmed) return '<br/>';
+
+      if (line.includes('|') || line.includes('\t')) {
+        const cells = line.split(/[\t|]/).map(c => `<td style="border:1px solid #ddd; padding:6px 10px; font-family:'Calibri',sans-serif;">${c.trim()}</td>`).join('');
+        return `<table style="border-collapse:collapse; width:100%; margin-bottom:4pt;"><tr>${cells}</tr></table>`;
+      }
+
+      return `<p style="margin-bottom:6pt; font-size:11.0pt; font-family:'Calibri','Segoe UI',sans-serif; color:#111; line-height:1.3;">${line}</p>`;
+    })
     .join('');
 
   const htmlDoc = `<!DOCTYPE html>
@@ -54,7 +65,7 @@ export const downloadWordDoc = (filename: string, textContent: string, title: st
 };
 
 export const generateSamplePdfBlob = (title: string, textContent: string): Blob => {
-  const content = `%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >>\nendobj\n4 0 obj\n<< /Length 120 >>\nstream\nBT\n/F1 16 Tf\n50 750 Td\n(${title}) Tj\n/F1 12 Tf\n0 -30 Td\n(${textContent.replace(/[()]/g, '')}) Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000058 00000 n\n0000000115 00000 n\n0000000280 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n450\n%%EOF`;
+  const content = `%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >>\nendobj\n4 0 obj\n<< /Length 120 >>\nstream\nBT\n/F1 16 Tf\n50 750 Td\n(${title}) Tj\n/F1 12 Tf\n0 -30 Td\n(${textContent.replace(/[()]/g, '')}) Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000058 00000 n\n0000000058 00000 n\n0000000115 00000 n\n0000000280 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n450\n%%EOF`;
   return new Blob([content], { type: 'application/pdf' });
 };
 
@@ -76,8 +87,8 @@ const renderPdfPageToCanvas = async (pdfPage: any): Promise<string> => {
 };
 
 /**
- * High-accuracy PDF text extractor combining PDF.js with automatic Tesseract AI OCR
- * for scanned / photo-based PDFs. Reads Hindi & English with 100% accuracy.
+ * High-accuracy PDF text extractor combining PDF.js with automatic Tesseract AI OCR.
+ * Strictly returns genuine detected text without any fake mock content.
  */
 export const extractPdfContentAccurate = async (
   file: File, 
@@ -110,15 +121,16 @@ export const extractPdfContentAccurate = async (
       let ocrText = '';
       const worker = await createWorker(['hin', 'eng']);
 
-      for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
-        if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का अक्षर-अक्षर स्कैन किया जा रहा है...`);
+      for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+        if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का अक्षर व टेबल स्कैन किया जा रहा है...`);
         const page = await pdf.getPage(i);
         const pageImageDataUrl = await renderPdfPageToCanvas(page);
 
         if (pageImageDataUrl) {
           const { data } = await worker.recognize(pageImageDataUrl);
-          if (data.text.trim()) {
-            ocrText += data.text.trim() + '\n\n';
+          const pageFormatted = formatOcrDataWithLayout(data);
+          if (pageFormatted.formattedText.trim()) {
+            ocrText += pageFormatted.formattedText.trim() + '\n\n';
           }
         }
       }
@@ -130,13 +142,9 @@ export const extractPdfContentAccurate = async (
       }
     }
 
-    if (fullText.trim()) {
-      return fullText.trim();
-    }
-
-    return `भागसुर चौकी रिपोर्ट / Bhagsur Choki Document\n\nकार्यालय चौकी प्रभारी, भागसुर\nदिनांक: ${new Date().toLocaleDateString('hi-IN')}\n\nविषय: पुलिस चौकी भागसुर संबंधी रिपोर्ट एवं रिकॉर्ड रिकॉर्ड्स।\n\nउक्त विषय में निवेदन है कि भागसुर चौकी क्षेत्र के अंतर्गत सुरक्षा एवं शांति व्यवस्था बनाए रखने हेतु निरंतर गश्त जारी है। संबंधित शिकायत एवं आवेदनों का समयबद्ध निस्तारण किया जा रहा है।`;
+    return fullText.trim();
   } catch (err) {
     console.error('OCR Extraction Error:', err);
-    return `भागसुर चौकी दस्तावेज / Bhagsur Choki Document\n\nकार्यालय पुलिस चौकी, भागसुर\nविषय: रिपोर्ट एवं आवेदन पत्र।\n\nसप्रमाण निवेदन है कि संबंधित मामले में आवश्यक कार्यवाही की जा चुकी है। दस्तावेज़ की प्रति संलग्न है।`;
+    return '';
   }
 };

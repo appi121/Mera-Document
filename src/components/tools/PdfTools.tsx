@@ -69,7 +69,11 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         setExtractedText(text);
         setProcessing(false);
         setCompleted(true);
-        showSuccess(lang === 'hi' ? 'PDF का डाटा सफलतापूर्वक स्कैन हो गया है!' : 'PDF data extracted with AI OCR!');
+        if (text) {
+          showSuccess(lang === 'hi' ? 'PDF का डाटा सफलतापूर्वक स्कैन हो गया है!' : 'PDF data extracted with AI OCR!');
+        } else {
+          showError(lang === 'hi' ? 'PDF से साफ़ टेक्स्ट नहीं मिल पाया' : 'Could not extract text from PDF');
+        }
       }
     }
   };
@@ -88,7 +92,11 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
       setExtractedText(text);
       setProcessing(false);
       setCompleted(true);
-      showSuccess(lang === 'hi' ? 'आपकी फ़ाइल 100% शुद्धता से तैयार है!' : 'File converted with 100% accuracy!');
+      if (text) {
+        showSuccess(lang === 'hi' ? 'आपकी फ़ाइल 100% शुद्धता से तैयार है!' : 'File converted with 100% accuracy!');
+      } else {
+        showError(lang === 'hi' ? 'कोई टेक्स्ट नहीं मिला' : 'No text detected');
+      }
     } else {
       setTimeout(() => {
         setProcessing(false);
@@ -99,24 +107,26 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
   };
 
   const handleDownloadExcel = () => {
+    if (!extractedText.trim()) {
+      showError(lang === 'hi' ? 'कोई डाटा नहीं मिला' : 'No data found');
+      return;
+    }
+
     const originalName = files[0]?.name || 'table_document';
     const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
 
-    const rawData = extractedText || `क्र.सं.,विवरण,मात्रा,दर,कुल राशि\n1,सामग्री प्रविष्टि 1,10,150,1500\n2,सामग्री प्रविष्टि 2,5,300,1500`;
-    
-    // Format rows for HTML Excel format
-    const rowsHtml = rawData
+    const rowsHtml = extractedText
       .split('\n')
       .map(line => line.trim())
       .filter(Boolean)
       .map(line => {
-        const cells = line.split(/[\t,|,]/).map(c => `<td style="border:1px solid #ccc; padding:6px 12px; font-family:Calibri,sans-serif;">${c.trim()}</td>`).join('');
+        const cells = line.split(/[\t,|,]/).map(c => `<td style="border:1px solid #ccc; padding:6px 12px; font-family:Calibri,sans-serif; mso-number-format:'\\@';">${c.trim()}</td>`).join('');
         return `<tr>${cells}</tr>`;
       })
       .join('');
 
     const excelDoc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Sheet1</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>
+<head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Sheet1</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><style>td { mso-number-format:"\\@"; }</style></head>
 <body><table style="border-collapse:collapse;">${rowsHtml}</table></body></html>`;
 
     const blob = new Blob(['\ufeff' + excelDoc], { type: 'application/vnd.ms-excel;charset=utf-8' });
@@ -125,12 +135,15 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
   };
 
   const handleDownloadWord = () => {
-    const originalName = files[0]?.name || 'bhagsur_choki_10';
+    const originalName = files[0]?.name || 'document';
     const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
 
     if (activeSubTab === 'pdf-to-word') {
-      const contentToSave = extractedText || `भागसुर चौकी रिपोर्ट / Bhagsur Choki Document\n\nकार्यालय चौकी प्रभारी, भागसुर`;
-      downloadWordDoc(`${baseName}_converted.doc`, contentToSave, baseName);
+      if (!extractedText.trim()) {
+        showError(lang === 'hi' ? 'कोई डाटा नहीं मिला' : 'No text found');
+        return;
+      }
+      downloadWordDoc(`${baseName}_converted.doc`, extractedText, baseName);
     } else {
       const pdfBlob = generateSamplePdfBlob('Mera Document Converted File', `Converted from ${originalName}`);
       downloadFile(pdfBlob, `${baseName}_converted.pdf`, 'application/pdf');
@@ -140,6 +153,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
   };
 
   const handleDownloadTxt = () => {
+    if (!extractedText.trim()) return;
     const originalName = files[0]?.name || 'document';
     const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
     downloadFile(extractedText, `${baseName}_text.txt`, 'text/plain;charset=utf-8');
@@ -147,6 +161,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
   };
 
   const handleCopyText = () => {
+    if (!extractedText) return;
     navigator.clipboard.writeText(extractedText);
     setCopied(true);
     showSuccess(lang === 'hi' ? 'पूरा टेक्स्ट कॉपी हो गया!' : 'Text copied to clipboard!');
