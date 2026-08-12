@@ -4,149 +4,160 @@ export interface OcrStructureResult {
   maxCols: number;
 }
 
-/**
- * Filter out OCR garbage symbols like '[wn', '[Ever', '[gw', 'था४', '8४', 'ADA', '|@', etc.
- * while keeping valid Hindi words, English words, numbers, and Hindi punctuation.
- */
-function sanitizeWord(word: string): string {
-  if (!word) return '';
-
-  // Remove leading/trailing stray brackets, quotes, or noise characters
-  let cleaned = word
-    .replace(/^[\[\](){}\"“’'|\\/@~=+\-*^`%]+|[\[\](){}\"“’'|\\/@~=+\-*^`%]+$/g, '')
-    .trim();
-
-  // If word became an obvious 1-2 character garbage noise like '[w', 'oi', 'Ci', 'Cae' with weird symbols, filter it out
-  if (/^[\[\](){}~`|@\\]+$/.test(cleaned)) {
-    return '';
-  }
-
-  return cleaned;
+interface WordBox {
+  text: string;
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+  cy: number;
+  h: number;
 }
 
 /**
- * Formats OCR output cleanly without data loss, capturing every single line from the document.
+ * Advanced Table Extractor from OCR Bounding Boxes:
+ * 1. Groups words into Rows based on Y-coordinate overlap.
+ * 2. Groups X-coordinates into global Column Ranges.
+ * 3. Places words in the exact Row x Column intersection.
  */
 export function formatOcrDataWithLayout(data: any): OcrStructureResult {
   const rawText = data?.text || '';
 
-  if (!data || !data.lines || data.lines.length === 0) {
-    const cleanLines = rawText
-      .split('\n')
-      .map((l: string) => l.split(/\s+/).map(sanitizeWord).filter(Boolean).join(' '))
-      .filter((l: string) => l.trim().length > 0);
+  // Extract all valid words with bounding boxes
+  const words: WordBox[] = [];
 
-    const fullCleanText = cleanLines.join('\n');
-    const simpleMatrix = cleanLines.map((l: string) => [l]);
-
-    return {
-      formattedText: fullCleanText || rawText,
-      gridMatrix: simpleMatrix.length ? simpleMatrix : [['']],
-      maxCols: 1,
-    };
+  if (data && data.words && data.words.length > 0) {
+    data.words.forEach((w: any) => {
+      const txt = (w.text || '').replace(/^[|\[\]{}\\]+$/g, '').trim();
+      if (txt) {
+        words.push({
+          text: txt,
+          x0: w.bbox.x0,
+          x1: w.bbox.x1,
+          y0: w.bbox.y0,
+          y1: w.bbox.y1,
+          cy: (w.bbox.y0 + w.bbox.y1) / 2,
+          h: w.bbox.y1 - w.bbox.y0,
+        });
+      }
+    });
+  } else if (data && data.lines) {
+    data.lines.forEach((line: any) => {
+      if (line.words) {
+        line.words.forEach((w: any) => {
+          const txt = (w.text || '').replace(/^[|\[\]{}\\]+$/g, '').trim();
+          if (txt) {
+            words.push({
+              text: txt,
+              x0: w.bbox.x0,
+              x1: w.bbox.x1,
+              y0: w.bbox.y0,
+              y1: w.bbox.y1,
+              cy: (w.bbox.y0 + w.bbox.y1) / 2,
+              h: w.bbox.y1 - w.bbox.y0,
+            });
+          }
+        });
+      }
+    });
   }
 
-  // Step 1: Process every single line to ensure 100% COMPLETE DATA
-  const processedRows: { words: string[]; rawLine: string; x0List: number[] }[] = [];
-  const allX0s: number[] = [];
-
-  data.lines.forEach((line: any) => {
-    let lineWords: { text: string; x0: number }[] = [];
-
-    if (line.words && line.words.length > 0) {
-      line.words.forEach((w: any) => {
-        const clean = sanitizeWord(w.text);
-        if (clean) {
-          lineWords.push({ text: clean, x0: w.bbox.x0 });
-          allX0s.push(w.bbox.x0);
-        }
-      });
-    } else if (line.text && line.text.trim()) {
-      const wordsArr = line.text.split(/\s+/).map(sanitizeWord).filter(Boolean);
-      if (wordsArr.length > 0) {
-        lineWords = wordsArr.map((w: string) => ({ text: w, x0: 0 }));
-      }
-    }
-
-    if (lineWords.length > 0) {
-      processedRows.push({
-        words: lineWords.map(w => w.text),
-        rawLine: lineWords.map(w => w.text).join(' '),
-        x0List: lineWords.map(w => w.x0),
-      });
-    }
-  });
-
-  if (processedRows.length === 0) {
+  // Fallback if no bounding box words exist
+  if (words.length === 0) {
+    const lines = rawText.split('\n').map((l: string) => l.trim()).filter(Boolean);
+    const grid = lines.map((l: string) => l.split(/\s{2,}|\t/).filter(Boolean));
     return {
       formattedText: rawText,
-      gridMatrix: rawText.split('\n').map((l: string) => [l]),
+      gridMatrix: grid.length ? grid : [['']],
       maxCols: 1,
     };
   }
 
-  // Step 2: Determine Grid Columns for Excel
-  allX0s.sort((a, b) => a - b);
-  const colClusterCenters: number[] = [];
-  const CLUSTER_THRESHOLD = 40;
+  // Step 1: Group words into Rows by Y-coordinate overlap
+  words.sort((a, b) => a.y0 - b.y0);
 
-  allX0s.forEach(x => {
-    if (x === 0) return;
-    const existing = colClusterCenters.find(c => Math.abs(c - x) < CLUSTER_THRESHOLD);
-    if (existing === undefined) {
-      colClusterCenters.push(x);
+  const rowGroups: WordBox[][] = [];
+
+  words.forEach(word => {
+    let matchedRow = rowGroups.find(row => {
+      const avgY = row.reduce((sum, item) => sum + item.cy, 0) / row.length;
+      const avgH = row.reduce((sum, item) => sum + item.h, 0) / row.length;
+      return Math.abs(word.cy - avgY) < Math.max(8, avgH * 0.6);
+    });
+
+    if (matchedRow) {
+      matchedRow.push(word);
+    } else {
+      rowGroups.push([word]);
     }
   });
 
-  colClusterCenters.sort((a, b) => a - b);
-  const numCols = Math.max(1, colClusterCenters.length);
+  // Sort rows top-to-bottom
+  rowGroups.sort((a, b) => {
+    const avgA = a.reduce((sum, item) => sum + item.cy, 0) / a.length;
+    const avgB = b.reduce((sum, item) => sum + item.cy, 0) / b.length;
+    return avgA - avgB;
+  });
 
-  const getColIndex = (x: number): number => {
-    if (colClusterCenters.length === 0 || x === 0) return 0;
-    let bestIdx = 0;
-    let minDist = Infinity;
-    colClusterCenters.forEach((center, idx) => {
-      const dist = Math.abs(center - x);
-      if (dist < minDist) {
-        minDist = dist;
-        bestIdx = idx;
+  // Sort words inside each row left-to-right
+  rowGroups.forEach(row => row.sort((a, b) => a.x0 - b.x0));
+
+  // Step 2: Determine Global Column X-Ranges
+  const x0List = words.map(w => w.x0).sort((a, b) => a - b);
+  const colCenters: number[] = [];
+  const X_TOLERANCE = 45; // Column clustering tolerance
+
+  x0List.forEach(x => {
+    const existing = colCenters.find(c => Math.abs(c - x) < X_TOLERANCE);
+    if (existing === undefined) {
+      colCenters.push(x);
+    }
+  });
+
+  colCenters.sort((a, b) => a - b);
+  const numCols = Math.max(1, colCenters.length);
+
+  const getColIndex = (x0: number): number => {
+    let minDiff = Infinity;
+    let colIdx = 0;
+    colCenters.forEach((center, idx) => {
+      const diff = Math.abs(center - x0);
+      if (diff < minDiff) {
+        minDiff = diff;
+        colIdx = idx;
       }
     });
-    return bestIdx;
+    return colIdx;
   };
 
-  // Step 3: Build Grid Matrix and Full Formatted Text without dropping any line
+  // Step 3: Populate Table Grid Matrix
   const gridMatrix: string[][] = [];
-  const fullTextLines: string[] = [];
+  const textLines: string[] = [];
 
-  processedRows.forEach(row => {
+  rowGroups.forEach(row => {
     const rowCells: string[] = Array(numCols).fill('');
 
-    row.words.forEach((w, idx) => {
-      const x0 = row.x0List[idx] || 0;
-      const colIdx = getColIndex(x0);
-      if (rowCells[colIdx]) {
-        rowCells[colIdx] += ' ' + w;
+    row.forEach(word => {
+      const cIdx = getColIndex(word.x0);
+      if (rowCells[cIdx]) {
+        rowCells[cIdx] += ' ' + word.text;
       } else {
-        rowCells[colIdx] = w;
+        rowCells[cIdx] = word.text;
       }
     });
 
-    gridMatrix.push(rowCells);
-    
-    // Clean space-separated line representation
-    const lineText = rowCells.filter(Boolean).join('   ');
-    if (lineText.trim()) {
-      fullTextLines.push(lineText);
-    } else if (row.rawLine.trim()) {
-      fullTextLines.push(row.rawLine);
+    // Clean leading/trailing spaces in cells
+    const cleanedRow = rowCells.map(c => c.trim());
+
+    // Only keep rows that contain at least one non-empty cell
+    if (cleanedRow.some(Boolean)) {
+      gridMatrix.push(cleanedRow);
+      textLines.push(cleanedRow.filter(Boolean).join('   '));
     }
   });
 
-  const finalFormattedText = fullTextLines.join('\n');
-
   return {
-    formattedText: finalFormattedText || rawText,
+    formattedText: textLines.join('\n'),
     gridMatrix: gridMatrix.length > 0 ? gridMatrix : [['']],
     maxCols: numCols,
   };
