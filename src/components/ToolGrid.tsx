@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Language, ToolItem } from '@/types/document';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AdBanner } from '@/components/AdBanner';
 import { 
   FileText, 
   UserCheck, 
@@ -306,60 +307,65 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTools.map((tool) => (
-            <Card
-              key={tool.id}
-              onClick={() => onSelectTool(tool.id)}
-              className="group cursor-pointer border-orange-100/80 hover:border-orange-400 bg-white hover:bg-gradient-to-br hover:from-white hover:to-orange-50/30 transition-all duration-300 hover:shadow-xl rounded-2xl p-6 relative flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
-                    {tool.icon === 'photo-resizer' && <ImageIcon className="w-6 h-6" />}
-                    {tool.icon === 'passport-sheet' && <Grid className="w-6 h-6" />}
-                    {tool.icon === 'id-joiner' && <CreditCard className="w-6 h-6" />}
-                    {tool.icon === 'affidavit' && <FileCheck2 className="w-6 h-6" />}
-                    {tool.icon === 'pdf-to-word' && <FileText className="w-6 h-6" />}
-                    {tool.icon === 'word-to-pdf' && <FileText className="w-6 h-6" />}
-                    {tool.icon === 'excel-to-pdf' && <FileSpreadsheet className="w-6 h-6" />}
-                    {tool.icon === 'ppt-to-pdf' && <Presentation className="w-6 h-6" />}
-                    {tool.icon === 'img-to-pdf' && <FileImage className="w-6 h-6" />}
-                    {tool.icon === 'merge-pdf' && <Layers className="w-6 h-6" />}
-                    {tool.icon === 'split-pdf' && <Scissors className="w-6 h-6" />}
-                    {tool.icon === 'compress-pdf' && <Minimize2 className="w-6 h-6" />}
-                    {tool.icon === 'ocr' && <Camera className="w-6 h-6" />}
-                    {tool.icon === 'resume' && <UserCheck className="w-6 h-6" />}
-                    {tool.icon === 'translate' && <Globe className="w-6 h-6" />}
-                    {tool.icon === 'letter' && <PenTool className="w-6 h-6" />}
-                    {tool.icon === 'govt' && <Building2 className="w-6 h-6" />}
-                    {tool.icon === 'signature' && <FileSignature className="w-6 h-6" />}
-                    {tool.icon === 'templates' && <CopyCheck className="w-6 h-6" />}
-                    {tool.icon === 'excel' && <Table className="w-6 h-6" />}
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTools.map((tool) => (
+              <Card
+                key={tool.id}
+                onClick={() => onSelectTool(tool.id)}
+                className="group cursor-pointer border-orange-100/80 hover:border-orange-400 bg-white hover:bg-gradient-to-br hover:from-white hover:to-orange-50/30 transition-all duration-300 hover:shadow-xl rounded-2xl p-6 relative flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
+                      {tool.icon === 'photo-resizer' && <ImageIcon className="w-6 h-6" />}
+                      {tool.icon === 'passport-sheet' && <Grid className="w-6 h-6" />}
+                      {tool.icon === 'id-joiner' && <CreditCard className="w-6 h-6" />}
+                      {tool.icon === 'affidavit' && <FileCheck2 className="w-6 h-6" />}
+                      {tool.icon === 'pdf-to-word' && <FileText className="w-6 h-6" />}
+                      {tool.icon === 'word-to-pdf' && <FileText className="w-6 h-6" />}
+                      {tool.icon === 'excel-to-pdf' && <FileSpreadsheet className="w-6 h-6" />}
+                      {tool.icon === 'ppt-to-pdf' && <Presentation className="w-6 h-6" />}
+                      {tool.icon === 'img-to-pdf' && <FileImage className="w-6 h-6" />}
+                      {tool.icon === 'merge-pdf' && <Layers className="w-6 h-6" />}
+                      {tool.icon === 'split-pdf' && <Scissors className="w-6 h-6" />}
+                      {tool.icon === 'compress-pdf' && <Minimize2 className="w-6 h-6" />}
+                      {tool.icon === 'ocr' && <Camera className="w-6 h-6" />}
+                      {tool.icon === 'resume' && <UserCheck className="w-6 h-6" />}
+                      {tool.icon === 'translate' && <Globe className="w-6 h-6" />}
+                      {tool.icon === 'letter' && <PenTool className="w-6 h-6" />}
+                      {tool.icon === 'govt' && <Building2 className="w-6 h-6" />}
+                      {tool.icon === 'signature' && <FileSignature className="w-6 h-6" />}
+                      {tool.icon === 'templates' && <CopyCheck className="w-6 h-6" />}
+                      {tool.icon === 'excel' && <Table className="w-6 h-6" />}
+                    </div>
+
+                    {(tool.badgeHi || tool.badgeEn) && (
+                      <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200 text-xs font-semibold px-2.5 py-0.5">
+                        {lang === 'hi' ? tool.badgeHi : tool.badgeEn}
+                      </Badge>
+                    )}
                   </div>
 
-                  {(tool.badgeHi || tool.badgeEn) && (
-                    <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200 text-xs font-semibold px-2.5 py-0.5">
-                      {lang === 'hi' ? tool.badgeHi : tool.badgeEn}
-                    </Badge>
-                  )}
+                  <h3 className="font-bold text-gray-900 text-lg mb-2 group-hover:text-orange-600 transition-colors">
+                    {lang === 'hi' ? tool.titleHi : tool.titleEn}
+                  </h3>
+
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                    {lang === 'hi' ? tool.descHi : tool.descEn}
+                  </p>
                 </div>
 
-                <h3 className="font-bold text-gray-900 text-lg mb-2 group-hover:text-orange-600 transition-colors">
-                  {lang === 'hi' ? tool.titleHi : tool.titleEn}
-                </h3>
+                <div className="pt-2 flex items-center text-xs font-bold text-orange-600 group-hover:translate-x-1 transition-transform">
+                  <span>{lang === 'hi' ? 'उपयोग करें ➔' : 'Use Tool ➔'}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
 
-                <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                  {lang === 'hi' ? tool.descHi : tool.descEn}
-                </p>
-              </div>
-
-              <div className="pt-2 flex items-center text-xs font-bold text-orange-600 group-hover:translate-x-1 transition-transform">
-                <span>{lang === 'hi' ? 'उपयोग करें ➔' : 'Use Tool ➔'}</span>
-              </div>
-            </Card>
-          ))}
-        </div>
+          {/* Strategic AdSense Placement Slot */}
+          <AdBanner className="mt-10" />
+        </>
       )}
     </section>
   );

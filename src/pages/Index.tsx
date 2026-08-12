@@ -3,6 +3,7 @@ import { Language } from '@/types/document';
 import { Header } from '@/components/Header';
 import { HeroBanner } from '@/components/HeroBanner';
 import { ToolGrid } from '@/components/ToolGrid';
+import { AdBanner } from '@/components/AdBanner';
 import { PdfTools, PdfToolMode } from '@/components/tools/PdfTools';
 import { ResumeBuilder } from '@/components/tools/ResumeBuilder';
 import { Translator } from '@/components/tools/Translator';
@@ -73,6 +74,10 @@ const Index = () => {
               searchQuery={searchQuery} 
               setSearchQuery={setSearchQuery} 
             />
+            
+            {/* Monetization Slot below Hero */}
+            <AdBanner />
+
             <ToolGrid 
               lang={lang} 
               searchQuery={searchQuery} 
@@ -81,6 +86,8 @@ const Index = () => {
           </>
         ) : (
           <div className="py-6">
+            <AdBanner />
+
             {isPdfTool(activeTool) && (
               <PdfTools 
                 lang={lang} 
