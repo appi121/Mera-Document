@@ -5,12 +5,11 @@ export interface OcrStructureResult {
 }
 
 /**
- * Strictly preserves exact OCR words and unicode characters without altering any spelling.
- * Maps bounding box X-coordinates to grid columns to preserve original table alignment.
+ * Cleans OCR artifacts and formats clean text/table cells without injecting artificial '|' pipe symbols.
  */
 export function formatOcrDataWithLayout(data: any): OcrStructureResult {
   if (!data || !data.lines || data.lines.length === 0) {
-    const rawText = data?.text || '';
+    const rawText = cleanNoise(data?.text || '');
     const simpleRows = rawText.split('\n').map((l: string) => [l]).filter((r: string[]) => r[0]);
     return {
       formattedText: rawText,
@@ -19,22 +18,31 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
     };
   }
 
-  // Step 1: Collect all recognized words preserving 100% original text
-  const allWords: { text: string; x0: number; x1: number; y0: number; y1: number; lineIdx: number }[] = [];
+  // Helper to remove obvious OCR artifacts like random single brackets or pipes
+  function cleanNoise(str: string): string {
+    if (!str) return '';
+    return str
+      .replace(/^[|\[\]{}\\]+$/g, '') // remove pure pipe or bracket noise
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
 
-  data.lines.forEach((line: any, lineIdx: number) => {
+  // Step 1: Collect valid words with coordinates
+  const allWords: { text: string; x0: number; x1: number; y0: number; y1: number; confidence: number }[] = [];
+
+  data.lines.forEach((line: any) => {
     if (line.words && line.words.length > 0) {
       line.words.forEach((w: any) => {
-        // Keep exact original text from Tesseract
-        const txt = w.text;
-        if (txt && txt.trim()) {
+        const txt = cleanNoise(w.text);
+        // Ignore single random garbage symbols if confidence is low
+        if (txt && !(txt.length === 1 && w.confidence < 30 && ['|', '[', ']', '{', '}', '\\', '/'].includes(txt))) {
           allWords.push({
             text: txt,
             x0: w.bbox.x0,
             x1: w.bbox.x1,
             y0: w.bbox.y0,
             y1: w.bbox.y1,
-            lineIdx,
+            confidence: w.confidence || 100,
           });
         }
       });
@@ -42,7 +50,7 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
   });
 
   if (allWords.length === 0) {
-    const fallbackText = data?.text || '';
+    const fallbackText = cleanNoise(data?.text || '');
     const simpleRows = fallbackText.split('\n').map((l: string) => [l]);
     return {
       formattedText: fallbackText,
@@ -51,10 +59,10 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
     };
   }
 
-  // Step 2: Cluster X0 positions to discover global Column Starts
+  // Step 2: Cluster X0 positions for column positions
   const xPositions = allWords.map(w => w.x0).sort((a, b) => a - b);
   const colClusterCenters: number[] = [];
-  const CLUSTER_THRESHOLD = 30; // Distance threshold to group columns
+  const CLUSTER_THRESHOLD = 35;
 
   xPositions.forEach(x => {
     const existing = colClusterCenters.find(c => Math.abs(c - x) < CLUSTER_THRESHOLD);
@@ -79,32 +87,32 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
     return bestIdx;
   };
 
-  // Step 3: Build Grid Matrix where EVERY row has exactly `numCols` cells
+  // Step 3: Build Grid Matrix cleanly WITHOUT inserting '|' pipe characters
   const gridMatrix: string[][] = [];
-  let formattedText = '';
+  let formattedTextLines: string[] = [];
 
   data.lines.forEach((line: any) => {
     if (!line.words || line.words.length === 0) {
-      if (line.text && line.text.trim()) {
+      const lineTxt = cleanNoise(line.text);
+      if (lineTxt) {
         const rowCells: string[] = Array(numCols).fill('');
-        rowCells[0] = line.text;
+        rowCells[0] = lineTxt;
         gridMatrix.push(rowCells);
-        formattedText += line.text + '\n';
+        formattedTextLines.push(lineTxt);
       }
       return;
     }
 
-    // Preserve words sorted left to right
-    const lineWords = [...line.words]
-      .filter((w: any) => w.text && w.text.trim())
-      .sort((a: any, b: any) => a.bbox.x0 - b.bbox.x0);
+    const lineWords = line.words
+      .map((w: any) => ({ text: cleanNoise(w.text), x0: w.bbox.x0, confidence: w.confidence || 100 }))
+      .filter((w: any) => w.text);
 
     if (lineWords.length === 0) return;
 
     const rowCells: string[] = Array(numCols).fill('');
 
     lineWords.forEach((w: any) => {
-      const colIdx = getColIndex(w.bbox.x0);
+      const colIdx = getColIndex(w.x0);
       if (rowCells[colIdx]) {
         rowCells[colIdx] += ' ' + w.text;
       } else {
@@ -114,14 +122,17 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
 
     gridMatrix.push(rowCells);
 
-    const lineTextStr = rowCells.filter(Boolean).join(' \t| ');
-    if (lineTextStr) {
-      formattedText += lineTextStr + '\n';
+    // Join with natural double spaces or tabs instead of '|'
+    const lineTextStr = rowCells.filter(Boolean).join('   ');
+    if (lineTextStr.trim()) {
+      formattedTextLines.push(lineTextStr);
     }
   });
 
+  const finalFormattedText = formattedTextLines.join('\n');
+
   return {
-    formattedText: formattedText || data?.text || '',
+    formattedText: finalFormattedText || cleanNoise(data?.text || ''),
     gridMatrix: gridMatrix.length > 0 ? gridMatrix : [['']],
     maxCols: numCols,
   };

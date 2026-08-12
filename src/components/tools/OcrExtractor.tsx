@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { showSuccess, showError } from '@/utils/toast';
 import { downloadFile, downloadWordDoc } from '@/utils/download';
 import { formatOcrDataWithLayout } from '@/utils/ocrFormatter';
+import { preprocessImageForOcr } from '@/utils/imagePreprocess';
 import { 
   ArrowLeft, 
   Camera, 
@@ -56,36 +57,38 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     }
 
     setLoading(true);
-    setStatusText(lang === 'hi' ? 'AI भाषा मॉडल (हिंदी व इंग्लिश) लोड हो रहा है...' : 'Loading AI OCR Engine...');
+    setStatusText(lang === 'hi' ? 'फोटो साफ़ व कंट्रास्ट बढ़ाई जा रही है...' : 'Enhancing image quality...');
 
     try {
+      const targetSource = previewUrl || (file ? URL.createObjectURL(file) : '');
+      
+      // Step 1: Pre-process image to enhance text contrast and remove background noise
+      const enhancedImageDataUrl = await preprocessImageForOcr(targetSource);
+
+      setStatusText(lang === 'hi' ? 'AI भाषा मॉडल (हिंदी व इंग्लिश) लोड हो रहा है...' : 'Loading AI Engine...');
+
+      // Step 2: Initialize worker with PSM auto block layout
       const worker = await createWorker(['hin', 'eng'], 1, {
         logger: (m) => {
-          if (m.status === 'loading tesseract core') {
-            setStatusText(lang === 'hi' ? 'AI कोर इंजन लोड हो रहा है...' : 'Loading AI Core...');
-          } else if (m.status === 'initializing tesseract') {
-            setStatusText(lang === 'hi' ? 'हिंदी व इंग्लिश मॉडल तैयार हो रहा है...' : 'Initializing OCR...');
-          } else if (m.status === 'recognizing text') {
+          if (m.status === 'recognizing text') {
             const pct = Math.round((m.progress || 0) * 100);
-            setStatusText(lang === 'hi' ? `अक्षर व टेबल स्कैन हो रहे हैं... ${pct}%` : `Scanning table & text... ${pct}%`);
+            setStatusText(lang === 'hi' ? `साफ़ अक्षर स्कैन हो रहे हैं... ${pct}%` : `Scanning clean text... ${pct}%`);
           }
         },
       });
 
-      setStatusText(lang === 'hi' ? 'एक्सेल टेबल ग्रिड अलाइनमेंट तैयार किया जा रहा है...' : 'Aligning Excel columns with image...');
+      setStatusText(lang === 'hi' ? 'अक्षरों व कॉलम्स का सही मिलान हो रहा है...' : 'Matching columns & text...');
       
-      const targetSource = previewUrl || file;
-      const { data } = await worker.recognize(targetSource!);
-
+      const { data } = await worker.recognize(enhancedImageDataUrl);
       await worker.terminate();
 
-      // Process with Smart 2D Grid Alignment
+      // Step 3: Format extracted text cleanly without '|' noise
       const result = formatOcrDataWithLayout(data);
 
       if (result.formattedText.trim()) {
         setExtractedText(result.formattedText);
         setStructuredTableData(result.gridMatrix);
-        showSuccess(lang === 'hi' ? 'फोटो का टेबल एक्सेल ग्रिड में 100% सही अलाइन हो गया!' : 'Table grid aligned perfectly for Excel!');
+        showSuccess(lang === 'hi' ? 'साफ़ एवं सटीक डाटा एक्सट्रेक्ट हो गया!' : 'Clean data extracted successfully!');
       } else {
         setExtractedText(
           lang === 'hi' 
@@ -107,20 +110,19 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     if (!extractedText) return;
     navigator.clipboard.writeText(extractedText);
     setCopied(true);
-    showSuccess(lang === 'hi' ? 'सुरक्षित लेआउट टेक्स्ट कॉपी हो गया!' : 'Structured text copied!');
+    showSuccess(lang === 'hi' ? 'साफ़ टेक्स्ट कॉपी हो गया!' : 'Clean text copied!');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadWord = () => {
     if (!extractedText) return;
-    downloadWordDoc(`OCR_Aligned_Document_${Date.now()}.doc`, extractedText, 'OCR Formatted Document');
+    downloadWordDoc(`Clean_Document_${Date.now()}.doc`, extractedText, 'Clean Document');
     showSuccess(lang === 'hi' ? 'MS Word (.doc) फ़ाइल डाउनलोड हुई!' : 'Word Document downloaded!');
   };
 
   const handleDownloadExcel = () => {
     if (structuredTableData.length === 0) return;
 
-    // Generate strict HTML table with MS Excel cell styling & text preserving rule
     const rowsHtml = structuredTableData.map(row => {
       const cells = row.map(cell => {
         const val = cell.trim();
@@ -137,7 +139,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     <x:ExcelWorkbook>
       <x:ExcelWorksheets>
         <x:ExcelWorksheet>
-          <x:Name>OCR Aligned Sheet</x:Name>
+          <x:Name>Clean OCR Sheet</x:Name>
           <x:WorksheetOptions>
             <x:DisplayGridlines/>
           </x:WorksheetOptions>
@@ -158,8 +160,8 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 </html>`;
 
     const blob = new Blob(['\ufeff' + excelDoc], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    downloadFile(blob, `OCR_Excel_Aligned_${Date.now()}.xls`, 'application/vnd.ms-excel');
-    showSuccess(lang === 'hi' ? 'MS Excel (.xls) सेम-टू-सेम टेबल फ़ाइल डाउनलोड हुई!' : 'Excel Table downloaded!');
+    downloadFile(blob, `Clean_Excel_${Date.now()}.xls`, 'application/vnd.ms-excel');
+    showSuccess(lang === 'hi' ? 'MS Excel (.xls) टेबल फ़ाइल डाउनलोड हुई!' : 'Excel Table downloaded!');
   };
 
   return (
@@ -173,18 +175,18 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
         <CardHeader className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-t-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-              📷 {lang === 'hi' ? '100% सेम-टू-सेम एक्सेल टेबल OCR एक्सट्रेक्टर' : '100% Same-to-Same Excel Table OCR'}
+              📷 {lang === 'hi' ? '100% सटीक टेक्स्ट व टेबल OCR एक्सट्रेक्टर' : '100% Clean Text & Table OCR'}
             </CardTitle>
 
             <Badge variant="secondary" className="bg-white/20 text-white border-white/40 text-xs px-2.5 py-1 w-fit">
               <Sparkles className="w-3.5 h-3.5 mr-1" />
-              {lang === 'hi' ? 'एक्सेल ग्रिड अलाइन' : 'Zero Column Shift'}
+              {lang === 'hi' ? 'इमेज एन्हांसमेंट एनेबल्ड' : 'Image Noise Cleaned'}
             </Badge>
           </div>
           <CardDescription className="text-orange-100 text-sm">
             {lang === 'hi' 
-              ? 'फोटो में बने टेबल, बिल या लिस्ट को बिना खिसके सेम-टू-सेम Excel (.xls) शीट में बदलें' 
-              : 'Extract table photos directly into perfectly aligned Excel sheets without column shifts'}
+              ? 'फोटो से हिंदी व इंग्लिश के शब्दों को बिना किसी कचरा सिंबल के साफ़-साफ़ निकालें' 
+              : 'Extract clean Hindi & English text from photos without garbage characters or artificial symbols'}
           </CardDescription>
         </CardHeader>
 
@@ -231,23 +233,23 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {loading 
-                  ? (lang === 'hi' ? 'एक्सेल अलाइनमेंट जारी है...' : 'Aligning Columns...') 
-                  : (lang === 'hi' ? 'सेम-टू-सेम एक्सेल टेबल निकालें' : 'Extract Aligned Excel Table')}
+                  ? (lang === 'hi' ? 'स्कैनिंग जारी है...' : 'Scanning Image...') 
+                  : (lang === 'hi' ? 'साफ़ टेक्स्ट व टेबल निकालें' : 'Extract Clean Text & Table')}
               </Button>
             </div>
 
             {/* Right Output Column with Tabs */}
             <div className="lg:col-span-7 space-y-3">
-              <Tabs defaultValue="table-view" className="w-full">
+              <Tabs defaultValue="text-view" className="w-full">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
                   <TabsList className="bg-orange-50 border border-orange-200">
-                    <TabsTrigger value="table-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                      <Table className="w-3.5 h-3.5" />
-                      {lang === 'hi' ? 'एक्सेल ग्रिड प्रीव्यू (Excel View)' : 'Excel Grid View'}
-                    </TabsTrigger>
                     <TabsTrigger value="text-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
                       <FileText className="w-3.5 h-3.5" />
-                      {lang === 'hi' ? 'टेक्स्ट व्यू (Formatted Text)' : 'Formatted Text'}
+                      {lang === 'hi' ? 'साफ़ टेक्स्ट (Clean Text)' : 'Clean Text'}
+                    </TabsTrigger>
+                    <TabsTrigger value="table-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
+                      <Table className="w-3.5 h-3.5" />
+                      {lang === 'hi' ? 'एक्सेल ग्रिड व्यू (Excel View)' : 'Excel Grid View'}
                     </TabsTrigger>
                   </TabsList>
 
@@ -264,12 +266,22 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                       {structuredTableData.length > 0 && (
                         <Button size="sm" onClick={handleDownloadExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs shadow-md">
                           <FileSpreadsheet className="w-3.5 h-3.5" />
-                          Excel (.xls) डाउनलोड करें
+                          Excel (.xls)
                         </Button>
                       )}
                     </div>
                   )}
                 </div>
+
+                <TabsContent value="text-view">
+                  <Textarea 
+                    rows={12} 
+                    value={extractedText} 
+                    onChange={(e) => setExtractedText(e.target.value)} 
+                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "साफ़ टेक्स्ट व टेबल निकालें" बटन दबाएं...' : 'Upload photo and click extract...'}
+                    className="font-sans text-xs sm:text-sm bg-slate-50 border-orange-200 focus-visible:ring-orange-500 h-[300px] p-3.5 leading-relaxed" 
+                  />
+                </TabsContent>
 
                 <TabsContent value="table-view">
                   <div className="border border-orange-200 rounded-xl overflow-x-auto h-[300px] bg-white p-2">
@@ -289,20 +301,10 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                       </table>
                     ) : (
                       <div className="h-full flex items-center justify-center text-xs text-gray-400">
-                        {lang === 'hi' ? 'फोटो स्कैन करने के बाद यहाँ परफेक्ट एक्सेल ग्रिड दिखाई देगी' : 'Aligned Excel grid preview will appear here'}
+                        {lang === 'hi' ? 'फोटो स्कैन करने के बाद यहाँ साफ़ टेबल ग्रिड दिखाई देगी' : 'Clean Excel grid preview will appear here'}
                       </div>
                     )}
                   </div>
-                </TabsContent>
-
-                <TabsContent value="text-view">
-                  <Textarea 
-                    rows={12} 
-                    value={extractedText} 
-                    onChange={(e) => setExtractedText(e.target.value)} 
-                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "सेम-टू-सेम एक्सेल टेबल निकालें" बटन दबाएं...' : 'Upload photo and click extract...'}
-                    className="font-mono text-xs sm:text-sm bg-slate-50 border-orange-200 focus-visible:ring-orange-500 h-[300px] p-3.5 leading-relaxed" 
-                  />
                 </TabsContent>
               </Tabs>
             </div>
