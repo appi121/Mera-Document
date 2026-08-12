@@ -14,6 +14,8 @@ import { DocTemplates } from '@/components/tools/DocTemplates';
 import { ExcelAssistant } from '@/components/tools/ExcelAssistant';
 import { PhotoResizer } from '@/components/tools/PhotoResizer';
 import { IdCardJoiner } from '@/components/tools/IdCardJoiner';
+import { PassportPhotoSheet } from '@/components/tools/PassportPhotoSheet';
+import { AffidavitGenerator } from '@/components/tools/AffidavitGenerator';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
 const Index = () => {
@@ -87,7 +89,9 @@ const Index = () => {
               />
             )}
             {activeTool === 'photo-resizer' && <PhotoResizer lang={lang} onBack={handleBackToHome} />}
+            {activeTool === 'passport-sheet' && <PassportPhotoSheet lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'id-joiner' && <IdCardJoiner lang={lang} onBack={handleBackToHome} />}
+            {activeTool === 'affidavit' && <AffidavitGenerator lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'ocr' && <OcrExtractor lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'resume' && <ResumeBuilder lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'translate' && <Translator lang={lang} onBack={handleBackToHome} />}

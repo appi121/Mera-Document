@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Language, ToolItem } from '@/types/document';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,9 @@ import {
   Scissors,
   Minimize2,
   Image as ImageIcon,
-  CreditCard
+  CreditCard,
+  Grid,
+  FileCheck2
 } from 'lucide-react';
 
 interface ToolGridProps {
@@ -41,6 +43,17 @@ export const toolsData: ToolItem[] = [
     badgeEn: 'Govt Form Special',
   },
   {
+    id: 'passport-sheet',
+    titleHi: '🖨️ पासपोर्ट फोटो प्रिंट शीट',
+    titleEn: '🖨️ Passport Photo Sheet Maker',
+    descHi: '1 फोटो से 4x6 पर 8 फोटो या A4 पर 30 फोटो की रेडी प्रिंट शीट बनाएं',
+    descEn: 'Generate printable 8-photo (4x6) or 30-photo (A4) sheets instantly',
+    icon: 'passport-sheet',
+    category: 'popular',
+    badgeHi: 'बहुत उपयोगी',
+    badgeEn: 'Must Have',
+  },
+  {
     id: 'id-joiner',
     titleHi: '🪪 आधार/ID कार्ड फ्रंट-बैक जोडर',
     titleEn: '🪪 ID Card Front & Back Joiner',
@@ -50,6 +63,17 @@ export const toolsData: ToolItem[] = [
     category: 'popular',
     badgeHi: 'उपयोगी',
     badgeEn: 'Useful',
+  },
+  {
+    id: 'affidavit',
+    titleHi: '📜 शपथ पत्र व एफ़िडेविट मेकर',
+    titleEn: '📜 AI Affidavit Generator',
+    descHi: 'गैप ईयर, नाम सुधार व आय स्व-घोषणा पत्र लीगल ड्राफ्ट तैयार करें',
+    descEn: 'Generate affidavits for Gap Year, Name Mismatch & Declarations',
+    icon: 'affidavit',
+    category: 'utilities',
+    badgeHi: 'लीगल',
+    badgeEn: 'Legal Draft',
   },
   {
     id: 'pdf-to-word',
@@ -207,14 +231,23 @@ export const toolsData: ToolItem[] = [
 ];
 
 export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectTool }) => {
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+
   const filteredTools = toolsData.filter(t => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       t.titleHi.toLowerCase().includes(query) ||
       t.titleEn.toLowerCase().includes(query) ||
       t.descHi.toLowerCase().includes(query) ||
       t.descEn.toLowerCase().includes(query)
     );
+
+    if (activeCategory === 'all') return matchesSearch;
+    if (activeCategory === 'pdf') return matchesSearch && t.category === 'pdf';
+    if (activeCategory === 'govt') return matchesSearch && (t.id === 'photo-resizer' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
+    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities');
+
+    return matchesSearch;
   });
 
   return (
@@ -225,8 +258,44 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
             {lang === 'hi' ? 'सभी टूल एक ही जगह' : 'All Tools in One Place'}
           </h2>
           <p className="text-gray-500 text-sm mt-1">
-            {lang === 'hi' ? 'अपनी आवश्यकतानुसार टूल पर क्लिक करें:' : 'Click on any tool to get started:'}
+            {lang === 'hi' ? 'अपनी आवश्यकतानुसार श्रेणी या टूल पर क्लिक करें:' : 'Select a category or click on any tool:'}
           </p>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex flex-wrap gap-1.5 bg-gray-100 p-1.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-medium">
+          <button
+            onClick={() => setActiveCategory('all')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              activeCategory === 'all' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {lang === 'hi' ? 'सभी (All)' : 'All Tools'}
+          </button>
+          <button
+            onClick={() => setActiveCategory('pdf')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              activeCategory === 'pdf' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {lang === 'hi' ? '📄 PDF टूल' : 'PDF Tools'}
+          </button>
+          <button
+            onClick={() => setActiveCategory('govt')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              activeCategory === 'govt' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {lang === 'hi' ? '🖼️ फॉर्म, फोटो व ID' : 'Forms & Photos'}
+          </button>
+          <button
+            onClick={() => setActiveCategory('ai')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              activeCategory === 'ai' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {lang === 'hi' ? '🤖 AI व यूटिलिटीज' : 'AI & Utilities'}
+          </button>
         </div>
       </div>
 
@@ -248,7 +317,9 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
                     {tool.icon === 'photo-resizer' && <ImageIcon className="w-6 h-6" />}
+                    {tool.icon === 'passport-sheet' && <Grid className="w-6 h-6" />}
                     {tool.icon === 'id-joiner' && <CreditCard className="w-6 h-6" />}
+                    {tool.icon === 'affidavit' && <FileCheck2 className="w-6 h-6" />}
                     {tool.icon === 'pdf-to-word' && <FileText className="w-6 h-6" />}
                     {tool.icon === 'word-to-pdf' && <FileText className="w-6 h-6" />}
                     {tool.icon === 'excel-to-pdf' && <FileSpreadsheet className="w-6 h-6" />}
