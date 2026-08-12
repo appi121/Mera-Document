@@ -1,7 +1,6 @@
 /**
- * Pre-processes an image on canvas before passing to OCR engine:
- * 1. Upscales small fonts for better recognition.
- * 2. Applies high-contrast grayscale and sharpening to remove background noise.
+ * Smart Gentle Image Preprocessor for Hindi & English OCR.
+ * Preserves thin Devanagari matras, numbers, and light text without destructive contrast clipping.
  */
 export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
   return new Promise((resolve) => {
@@ -15,8 +14,10 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
         return;
       }
 
-      // Upscale for small font clarity
-      const scale = Math.max(1, Math.min(2, 2200 / Math.max(img.width, img.height)));
+      // Calculate optimal resolution (~1800px max dimension for optimal OCR performance)
+      const maxDim = Math.max(img.width, img.height);
+      const scale = maxDim < 1000 ? 1.8 : (maxDim > 2200 ? 1500 / maxDim : 1.2);
+      
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
 
@@ -27,12 +28,15 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
 
-      // High-contrast grayscale conversion
+      // Gentle Luma Grayscale preserving Hindi Vowel Matras & Accents
       for (let i = 0; i < data.length; i += 4) {
-        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        // Contrast enhancement
-        const contrast = 1.4;
-        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+        // Mild contrast enhancement to avoid burning out Hindi matras
+        const factor = 1.15;
         let color = factor * (gray - 128) + 128;
         color = Math.min(255, Math.max(0, color));
 

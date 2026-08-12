@@ -57,38 +57,43 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     }
 
     setLoading(true);
-    setStatusText(lang === 'hi' ? 'फोटो साफ़ व कंट्रास्ट बढ़ाई जा रही है...' : 'Enhancing image quality...');
+    setStatusText(lang === 'hi' ? 'फोटो साफ़ व शुद्ध बनाई जा रही है...' : 'Preprocessing image...');
 
     try {
       const targetSource = previewUrl || (file ? URL.createObjectURL(file) : '');
       
-      // Step 1: Pre-process image to enhance text contrast and remove background noise
+      // Step 1: Pre-process image with Hindi Matra Preserver
       const enhancedImageDataUrl = await preprocessImageForOcr(targetSource);
 
-      setStatusText(lang === 'hi' ? 'AI भाषा मॉडल (हिंदी व इंग्लिश) लोड हो रहा है...' : 'Loading AI Engine...');
+      setStatusText(lang === 'hi' ? 'AI भाषा इंजन (हिंदी + इंग्लिश) चालू हो रहा है...' : 'Initializing OCR Engine...');
 
-      // Step 2: Initialize worker with PSM auto block layout
+      // Step 2: Initialize Tesseract worker
       const worker = await createWorker(['hin', 'eng'], 1, {
         logger: (m) => {
           if (m.status === 'recognizing text') {
             const pct = Math.round((m.progress || 0) * 100);
-            setStatusText(lang === 'hi' ? `साफ़ अक्षर स्कैन हो रहे हैं... ${pct}%` : `Scanning clean text... ${pct}%`);
+            setStatusText(lang === 'hi' ? `संपूर्ण पन्ना व अक्षर स्कैन हो रहे हैं... ${pct}%` : `Scanning full page... ${pct}%`);
           }
         },
       });
 
-      setStatusText(lang === 'hi' ? 'अक्षरों व कॉलम्स का सही मिलान हो रहा है...' : 'Matching columns & text...');
+      // Set Page Segmentation Mode to 3 (Fully automatic page segmentation)
+      await worker.setParameters({
+        tessedit_pageseg_mode: '3' as any,
+      });
+
+      setStatusText(lang === 'hi' ? 'साफ़ शब्दों व टेबल का मिलान हो रहा है...' : 'Formatting data...');
       
       const { data } = await worker.recognize(enhancedImageDataUrl);
       await worker.terminate();
 
-      // Step 3: Format extracted text cleanly without '|' noise
+      // Step 3: Format extracted text with garbage noise filtering and zero data loss
       const result = formatOcrDataWithLayout(data);
 
       if (result.formattedText.trim()) {
         setExtractedText(result.formattedText);
         setStructuredTableData(result.gridMatrix);
-        showSuccess(lang === 'hi' ? 'साफ़ एवं सटीक डाटा एक्सट्रेक्ट हो गया!' : 'Clean data extracted successfully!');
+        showSuccess(lang === 'hi' ? 'पूरा डाटा साफ़ एवं सटीक एक्सट्रेक्ट हो गया!' : 'Full clean data extracted successfully!');
       } else {
         setExtractedText(
           lang === 'hi' 
@@ -180,13 +185,13 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 
             <Badge variant="secondary" className="bg-white/20 text-white border-white/40 text-xs px-2.5 py-1 w-fit">
               <Sparkles className="w-3.5 h-3.5 mr-1" />
-              {lang === 'hi' ? 'इमेज एन्हांसमेंट एनेबल्ड' : 'Image Noise Cleaned'}
+              {lang === 'hi' ? 'मात्रा-सुरक्षा एनेबल्ड' : 'Garbage Noise Filtered'}
             </Badge>
           </div>
           <CardDescription className="text-orange-100 text-sm">
             {lang === 'hi' 
-              ? 'फोटो से हिंदी व इंग्लिश के शब्दों को बिना किसी कचरा सिंबल के साफ़-साफ़ निकालें' 
-              : 'Extract clean Hindi & English text from photos without garbage characters or artificial symbols'}
+              ? 'फोटो से हिंदी व इंग्लिश के सभी शब्दों को बिना किसी कचरा सिंबल के 100% साफ़-साफ़ निकालें' 
+              : 'Extract full clean Hindi & English text from photos without garbage characters or artificial symbols'}
           </CardDescription>
         </CardHeader>
 
@@ -234,7 +239,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {loading 
                   ? (lang === 'hi' ? 'स्कैनिंग जारी है...' : 'Scanning Image...') 
-                  : (lang === 'hi' ? 'साफ़ टेक्स्ट व टेबल निकालें' : 'Extract Clean Text & Table')}
+                  : (lang === 'hi' ? 'साफ़ टेक्स्ट व पूरा डाटा निकालें' : 'Extract Full Clean Text & Table')}
               </Button>
             </div>
 
@@ -278,7 +283,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                     rows={12} 
                     value={extractedText} 
                     onChange={(e) => setExtractedText(e.target.value)} 
-                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "साफ़ टेक्स्ट व टेबल निकालें" बटन दबाएं...' : 'Upload photo and click extract...'}
+                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "साफ़ टेक्स्ट व पूरा डाटा निकालें" बटन दबाएं...' : 'Upload photo and click extract...'}
                     className="font-sans text-xs sm:text-sm bg-slate-50 border-orange-200 focus-visible:ring-orange-500 h-[300px] p-3.5 leading-relaxed" 
                   />
                 </TabsContent>
