@@ -26,7 +26,8 @@ import {
   Clock,
   ShieldCheck,
   RefreshCw,
-  Keyboard
+  Keyboard,
+  Receipt
 } from 'lucide-react';
 
 interface ToolGridProps {
@@ -57,6 +58,17 @@ export const toolsData: ToolItem[] = [
     category: 'popular',
     badgeHi: 'कन्वर्टर',
     badgeEn: 'Converter',
+  },
+  {
+    id: 'gst-calculator',
+    titleHi: '🧾 GST बिल कैलकुलेटर व रसीद',
+    titleEn: '🧾 GST Bill Calculator & Receipt',
+    descHi: '5%, 12%, 18%, 28% GST बिल जोड़ें व ग्राहक हेतु व्हाट्सएप रसीद बनाएं',
+    descEn: 'Calculate GST bill with CGST/SGST breakdown & WhatsApp receipt',
+    icon: 'gst-calculator',
+    category: 'utilities',
+    badgeHi: 'दुकानदार स्पेशल',
+    badgeEn: 'Bill & Receipt',
   },
   {
     id: 'typing-counter',
@@ -294,7 +306,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
     if (activeCategory === 'all') return matchesSearch;
     if (activeCategory === 'pdf') return matchesSearch && t.category === 'pdf';
     if (activeCategory === 'govt') return matchesSearch && (t.id === 'photo-resizer' || t.id === 'image-converter' || t.id === 'age-calculator' || t.id === 'watermark' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
-    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities' || t.id === 'typing-counter');
+    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities' || t.id === 'typing-counter' || t.id === 'gst-calculator');
 
     return matchesSearch;
   });
@@ -368,6 +380,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
                     <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
                       {tool.icon === 'photo-resizer' && <ImageIcon className="w-6 h-6" />}
                       {tool.icon === 'image-converter' && <RefreshCw className="w-6 h-6" />}
+                      {tool.icon === 'gst-calculator' && <Receipt className="w-6 h-6" />}
                       {tool.icon === 'typing-counter' && <Keyboard className="w-6 h-6" />}
                       {tool.icon === 'age-calculator' && <Clock className="w-6 h-6" />}
                       {tool.icon === 'watermark' && <ShieldCheck className="w-6 h-6" />}

@@ -18,6 +18,7 @@ import { ExcelAssistant } from '@/components/tools/ExcelAssistant';
 import { PhotoResizer } from '@/components/tools/PhotoResizer';
 import { ImageConverter } from '@/components/tools/ImageConverter';
 import { TypingWordCounter } from '@/components/tools/TypingWordCounter';
+import { GstBillCalculator } from '@/components/tools/GstBillCalculator';
 import { IdCardJoiner } from '@/components/tools/IdCardJoiner';
 import { PassportPhotoSheet } from '@/components/tools/PassportPhotoSheet';
 import { AffidavitGenerator } from '@/components/tools/AffidavitGenerator';
@@ -112,6 +113,7 @@ const Index = () => {
             )}
             {activeTool === 'photo-resizer' && <PhotoResizer lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'image-converter' && <ImageConverter lang={lang} onBack={handleBackToHome} />}
+            {activeTool === 'gst-calculator' && <GstBillCalculator lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'typing-counter' && <TypingWordCounter lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'age-calculator' && <AgeCalculator lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'watermark' && <DocumentWatermark lang={lang} onBack={handleBackToHome} />}
