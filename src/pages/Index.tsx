@@ -12,6 +12,8 @@ import { OcrExtractor } from '@/components/tools/OcrExtractor';
 import { SignatureCreator } from '@/components/tools/SignatureCreator';
 import { DocTemplates } from '@/components/tools/DocTemplates';
 import { ExcelAssistant } from '@/components/tools/ExcelAssistant';
+import { PhotoResizer } from '@/components/tools/PhotoResizer';
+import { IdCardJoiner } from '@/components/tools/IdCardJoiner';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
 const Index = () => {
@@ -84,6 +86,8 @@ const Index = () => {
                 onBack={handleBackToHome} 
               />
             )}
+            {activeTool === 'photo-resizer' && <PhotoResizer lang={lang} onBack={handleBackToHome} />}
+            {activeTool === 'id-joiner' && <IdCardJoiner lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'ocr' && <OcrExtractor lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'resume' && <ResumeBuilder lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'translate' && <Translator lang={lang} onBack={handleBackToHome} />}

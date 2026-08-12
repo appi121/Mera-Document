@@ -17,7 +17,9 @@ import {
   FileImage,
   Layers,
   Scissors,
-  Minimize2
+  Minimize2,
+  Image as ImageIcon,
+  CreditCard
 } from 'lucide-react';
 
 interface ToolGridProps {
@@ -27,6 +29,28 @@ interface ToolGridProps {
 }
 
 export const toolsData: ToolItem[] = [
+  {
+    id: 'photo-resizer',
+    titleHi: '🖼️ फोटो व सिग्नेचर रिसाइज़र',
+    titleEn: '🖼️ Govt Photo & Signature Resizer',
+    descHi: 'SSC, बैंक व रेलवे फॉर्म के लिए फोटो/दस्तखत 20KB या 50KB सेट करें',
+    descEn: 'Resize photos & signatures under 20KB/50KB for govt job forms',
+    icon: 'photo-resizer',
+    category: 'popular',
+    badgeHi: 'सरकारी फॉर्म स्पेशल',
+    badgeEn: 'Govt Form Special',
+  },
+  {
+    id: 'id-joiner',
+    titleHi: '🪪 आधार/ID कार्ड फ्रंट-बैक जोडर',
+    titleEn: '🪪 ID Card Front & Back Joiner',
+    descHi: 'आधार, पैन व वोटर ID कार्ड के आगे-पीछे का भाग 1 पेज में जोड़ें',
+    descEn: 'Combine Front and Back of Aadhaar, PAN or Voter ID onto 1 page',
+    icon: 'id-joiner',
+    category: 'popular',
+    badgeHi: 'उपयोगी',
+    badgeEn: 'Useful',
+  },
   {
     id: 'pdf-to-word',
     titleHi: '📄 PDF to Word',
@@ -152,7 +176,6 @@ export const toolsData: ToolItem[] = [
     descHi: 'आय, जाति, निवास और पैन कार्ड फॉर्म की संपूर्ण गाइड',
     descEn: 'Complete guide & checklist for Indian Govt Forms',
     icon: 'govt',
-    category: 'popular',
   },
   {
     id: 'signature',
@@ -224,6 +247,8 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
+                    {tool.icon === 'photo-resizer' && <ImageIcon className="w-6 h-6" />}
+                    {tool.icon === 'id-joiner' && <CreditCard className="w-6 h-6" />}
                     {tool.icon === 'pdf-to-word' && <FileText className="w-6 h-6" />}
                     {tool.icon === 'word-to-pdf' && <FileText className="w-6 h-6" />}
                     {tool.icon === 'excel-to-pdf' && <FileSpreadsheet className="w-6 h-6" />}
