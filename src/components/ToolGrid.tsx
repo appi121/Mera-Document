@@ -37,7 +37,7 @@ interface ToolGridProps {
 }
 
 export const toolsData: ToolItem[] = [
-  // 1. Initial Core Tools (सबसे पहले जोड़ने वाले मुख्य टूल्स)
+  // 1st to 5th Tools (यूर्जर की आवश्यकतानुसार टॉप 5 का क्रम)
   {
     id: 'pdf-to-word',
     titleHi: '📄 PDF to Word (स्कैन OCR स्पेशल)',
@@ -49,6 +49,52 @@ export const toolsData: ToolItem[] = [
     badgeHi: 'टॉप 1 टूल',
     badgeEn: 'Top #1 Tool',
   },
+  {
+    id: 'word-to-pdf',
+    titleHi: '📝 Word to PDF',
+    titleEn: '📝 Word to PDF Converter',
+    descHi: 'Word (DOC/DOCX) फ़ाइल को तुरंत सुरक्षित PDF में बदलें',
+    descEn: 'Convert Word document to secure high quality PDF',
+    icon: 'word-to-pdf',
+    category: 'pdf',
+    badgeHi: '2nd टूल',
+    badgeEn: 'Top #2 Tool',
+  },
+  {
+    id: 'excel-to-pdf',
+    titleHi: '📊 Excel to PDF',
+    titleEn: '📊 Excel to PDF Converter',
+    descHi: 'Excel (XLS/XLSX) शीट्स को PDF फॉर्मेट में कनवर्ट करें',
+    descEn: 'Convert Excel spreadsheets into clean PDF documents',
+    icon: 'excel-to-pdf',
+    category: 'pdf',
+    badgeHi: '3rd टूल',
+    badgeEn: 'Top #3 Tool',
+  },
+  {
+    id: 'ppt-to-pdf',
+    titleHi: '🖥️ PPT to PDF',
+    titleEn: '🖥️ PPT to PDF Converter',
+    descHi: 'PowerPoint प्रस्तुति (PPT/PPTX) को आसानी से PDF में बदलें',
+    descEn: 'Convert PowerPoint slides to PDF format easily',
+    icon: 'ppt-to-pdf',
+    category: 'pdf',
+    badgeHi: '4th टूल',
+    badgeEn: 'Top #4 Tool',
+  },
+  {
+    id: 'excel',
+    titleHi: '📊 एक्सेल AI असिस्टेंट (Excel Formula)',
+    titleEn: '📊 Excel AI Assistant & Formula Helper',
+    descHi: 'एक्सेल फ़ॉर्मूला (VLOOKUP, SUM, GST) और डेटा शीट में सहायता पाएं',
+    descEn: 'Get instant Excel formulas & data management helper',
+    icon: 'excel',
+    category: 'utilities',
+    badgeHi: '5th टूल',
+    badgeEn: 'Top #5 Tool',
+  },
+
+  // अन्य सभी मुख्य व उपयोगी टूल्स
   {
     id: 'photo-resizer',
     titleHi: '🖼️ फोटो व सिग्नेचर रिसाइज़र',
@@ -120,8 +166,6 @@ export const toolsData: ToolItem[] = [
     icon: 'signature',
     category: 'utilities',
   },
-
-  // 2. Most Frequently Used Utilities (सबसे ज्यादा उपयोग होने वाले अन्य लोकप्रिय टूल्स)
   {
     id: 'passport-sheet',
     titleHi: '🖨️ पासपोर्ट फोटो प्रिंट शीट मेकर',
@@ -204,17 +248,6 @@ export const toolsData: ToolItem[] = [
     badgeHi: 'दुकानदार स्पेशल',
     badgeEn: 'Bill & Receipt',
   },
-
-  // 3. Additional PDF & Supporting Tools
-  {
-    id: 'word-to-pdf',
-    titleHi: '📝 Word to PDF',
-    titleEn: '📝 Word to PDF Converter',
-    descHi: 'Word (DOC/DOCX) फ़ाइल को तुरंत सुरक्षित PDF में बदलें',
-    descEn: 'Convert Word document to secure high quality PDF',
-    icon: 'word-to-pdf',
-    category: 'pdf',
-  },
   {
     id: 'img-to-pdf',
     titleHi: '🖼️ Image to PDF',
@@ -252,24 +285,6 @@ export const toolsData: ToolItem[] = [
     category: 'pdf',
   },
   {
-    id: 'excel-to-pdf',
-    titleHi: '📊 Excel to PDF',
-    titleEn: '📊 Excel to PDF Converter',
-    descHi: 'Excel (XLS/XLSX) शीट्स को PDF फॉर्मेट में कन्वर्ट करें',
-    descEn: 'Convert Excel spreadsheets into clean PDF documents',
-    icon: 'excel-to-pdf',
-    category: 'pdf',
-  },
-  {
-    id: 'ppt-to-pdf',
-    titleHi: '🖥️ PPT to PDF',
-    titleEn: '🖥️ PPT to PDF Converter',
-    descHi: 'PowerPoint प्रस्तुति (PPT/PPTX) को आसानी से PDF में बदलें',
-    descEn: 'Convert PowerPoint slides to PDF format easily',
-    icon: 'ppt-to-pdf',
-    category: 'pdf',
-  },
-  {
     id: 'templates',
     titleHi: '📋 डॉक्यूमेंट टेम्पलेट्स',
     titleEn: '📋 Document Templates',
@@ -277,15 +292,6 @@ export const toolsData: ToolItem[] = [
     descEn: 'Ready formats for rent agreement, receipts, salary slips',
     icon: 'templates',
     category: 'popular',
-  },
-  {
-    id: 'excel',
-    titleHi: '📊 एक्सेल AI असिस्टेंट',
-    titleEn: '📊 Excel AI Assistant',
-    descHi: 'एक्सेल फ़ॉर्मूला (VLOOKUP, SUM) और सहायता प्राप्त करें',
-    descEn: 'Get instant Excel formulas & data helper',
-    icon: 'excel',
-    category: 'utilities',
   },
 ];
 
@@ -302,9 +308,9 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
     );
 
     if (activeCategory === 'all') return matchesSearch;
-    if (activeCategory === 'pdf') return matchesSearch && t.category === 'pdf';
+    if (activeCategory === 'pdf') return matchesSearch && (t.category === 'pdf' || t.id.includes('pdf'));
     if (activeCategory === 'govt') return matchesSearch && (t.id === 'photo-resizer' || t.id === 'image-converter' || t.id === 'age-calculator' || t.id === 'watermark' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
-    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities' || t.id === 'typing-counter' || t.id === 'gst-calculator');
+    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities' || t.id === 'excel' || t.id === 'typing-counter' || t.id === 'gst-calculator');
 
     return matchesSearch;
   });
