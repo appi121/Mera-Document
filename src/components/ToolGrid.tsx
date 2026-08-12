@@ -24,7 +24,9 @@ import {
   Grid,
   FileCheck2,
   Clock,
-  ShieldCheck
+  ShieldCheck,
+  RefreshCw,
+  Keyboard
 } from 'lucide-react';
 
 interface ToolGridProps {
@@ -44,6 +46,28 @@ export const toolsData: ToolItem[] = [
     category: 'popular',
     badgeHi: 'सरकारी फॉर्म स्पेशल',
     badgeEn: 'Govt Form Special',
+  },
+  {
+    id: 'image-converter',
+    titleHi: '🔄 इमेज कनवर्टर (JPG, PNG, WEBP)',
+    titleEn: '🔄 Image Format & Target KB Converter',
+    descHi: 'WEBP/PNG फोटो को JPG में बदलें और मनचाहे KB में सेट करें',
+    descEn: 'Convert WEBP/PNG to JPG & squeeze image to exact KB size',
+    icon: 'image-converter',
+    category: 'popular',
+    badgeHi: 'कन्वर्टर',
+    badgeEn: 'Converter',
+  },
+  {
+    id: 'typing-counter',
+    titleHi: '⌨️ वर्ड काउंटर व टाइपिंग स्पीड टेस्ट',
+    titleEn: '⌨️ Word Counter & WPM Typing Test',
+    descHi: 'अक्षर व शब्द गिनें तथा परीक्षा हेतु WPM टाइपिंग स्पीड टेस्ट दें',
+    descEn: 'Count words & characters, measure exam WPM typing speed',
+    icon: 'typing-counter',
+    category: 'utilities',
+    badgeHi: 'परीक्षा स्पेशल',
+    badgeEn: 'Exam Special',
   },
   {
     id: 'age-calculator',
@@ -269,8 +293,8 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
 
     if (activeCategory === 'all') return matchesSearch;
     if (activeCategory === 'pdf') return matchesSearch && t.category === 'pdf';
-    if (activeCategory === 'govt') return matchesSearch && (t.id === 'photo-resizer' || t.id === 'age-calculator' || t.id === 'watermark' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
-    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities');
+    if (activeCategory === 'govt') return matchesSearch && (t.id === 'photo-resizer' || t.id === 'image-converter' || t.id === 'age-calculator' || t.id === 'watermark' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
+    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities' || t.id === 'typing-counter');
 
     return matchesSearch;
   });
@@ -343,6 +367,8 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
                       {tool.icon === 'photo-resizer' && <ImageIcon className="w-6 h-6" />}
+                      {tool.icon === 'image-converter' && <RefreshCw className="w-6 h-6" />}
+                      {tool.icon === 'typing-counter' && <Keyboard className="w-6 h-6" />}
                       {tool.icon === 'age-calculator' && <Clock className="w-6 h-6" />}
                       {tool.icon === 'watermark' && <ShieldCheck className="w-6 h-6" />}
                       {tool.icon === 'passport-sheet' && <Grid className="w-6 h-6" />}

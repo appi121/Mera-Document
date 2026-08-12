@@ -16,6 +16,8 @@ import { SignatureCreator } from '@/components/tools/SignatureCreator';
 import { DocTemplates } from '@/components/tools/DocTemplates';
 import { ExcelAssistant } from '@/components/tools/ExcelAssistant';
 import { PhotoResizer } from '@/components/tools/PhotoResizer';
+import { ImageConverter } from '@/components/tools/ImageConverter';
+import { TypingWordCounter } from '@/components/tools/TypingWordCounter';
 import { IdCardJoiner } from '@/components/tools/IdCardJoiner';
 import { PassportPhotoSheet } from '@/components/tools/PassportPhotoSheet';
 import { AffidavitGenerator } from '@/components/tools/AffidavitGenerator';
@@ -109,6 +111,8 @@ const Index = () => {
               />
             )}
             {activeTool === 'photo-resizer' && <PhotoResizer lang={lang} onBack={handleBackToHome} />}
+            {activeTool === 'image-converter' && <ImageConverter lang={lang} onBack={handleBackToHome} />}
+            {activeTool === 'typing-counter' && <TypingWordCounter lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'age-calculator' && <AgeCalculator lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'watermark' && <DocumentWatermark lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'passport-sheet' && <PassportPhotoSheet lang={lang} onBack={handleBackToHome} />}
