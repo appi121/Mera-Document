@@ -22,7 +22,9 @@ import {
   Image as ImageIcon,
   CreditCard,
   Grid,
-  FileCheck2
+  FileCheck2,
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 
 interface ToolGridProps {
@@ -42,6 +44,28 @@ export const toolsData: ToolItem[] = [
     category: 'popular',
     badgeHi: 'सरकारी फॉर्म स्पेशल',
     badgeEn: 'Govt Form Special',
+  },
+  {
+    id: 'age-calculator',
+    titleHi: '🎂 सरकारी फॉर्म आयु कैलकुलेटर',
+    titleEn: '🎂 Govt Form Age Calculator',
+    descHi: 'कट-ऑफ तारीख तक अपनी सटीक उम्र (वर्ष, महीने, दिन) निकालें',
+    descEn: 'Calculate exact age in Years, Months, Days on job cut-off date',
+    icon: 'age-calculator',
+    category: 'popular',
+    badgeHi: 'मोस्ट वांटेड',
+    badgeEn: 'Most Needed',
+  },
+  {
+    id: 'watermark',
+    titleHi: '🛡️ डॉक्यूमेंट सुरक्षा वाटरमार्क',
+    titleEn: '🛡️ Document Security Watermark',
+    descHi: 'आधार व पैन कार्ड पर "ONLY FOR KYC" वाटरमार्क लगाकर फ्रॉड रोकें',
+    descEn: 'Add protective "ONLY FOR BANK KYC" watermark on ID cards',
+    icon: 'watermark',
+    category: 'popular',
+    badgeHi: 'सुरक्षा स्पेशल',
+    badgeEn: 'Anti-Fraud',
   },
   {
     id: 'passport-sheet',
@@ -245,7 +269,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
 
     if (activeCategory === 'all') return matchesSearch;
     if (activeCategory === 'pdf') return matchesSearch && t.category === 'pdf';
-    if (activeCategory === 'govt') return matchesSearch && (t.id === 'photo-resizer' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
+    if (activeCategory === 'govt') return matchesSearch && (t.id === 'photo-resizer' || t.id === 'age-calculator' || t.id === 'watermark' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
     if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities');
 
     return matchesSearch;
@@ -319,6 +343,8 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
                       {tool.icon === 'photo-resizer' && <ImageIcon className="w-6 h-6" />}
+                      {tool.icon === 'age-calculator' && <Clock className="w-6 h-6" />}
+                      {tool.icon === 'watermark' && <ShieldCheck className="w-6 h-6" />}
                       {tool.icon === 'passport-sheet' && <Grid className="w-6 h-6" />}
                       {tool.icon === 'id-joiner' && <CreditCard className="w-6 h-6" />}
                       {tool.icon === 'affidavit' && <FileCheck2 className="w-6 h-6" />}

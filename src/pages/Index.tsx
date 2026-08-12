@@ -17,6 +17,9 @@ import { PhotoResizer } from '@/components/tools/PhotoResizer';
 import { IdCardJoiner } from '@/components/tools/IdCardJoiner';
 import { PassportPhotoSheet } from '@/components/tools/PassportPhotoSheet';
 import { AffidavitGenerator } from '@/components/tools/AffidavitGenerator';
+import { AgeCalculator } from '@/components/tools/AgeCalculator';
+import { DocumentWatermark } from '@/components/tools/DocumentWatermark';
+import { PrivacyPolicyModal } from '@/components/PrivacyPolicyModal';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
 const Index = () => {
@@ -96,6 +99,8 @@ const Index = () => {
               />
             )}
             {activeTool === 'photo-resizer' && <PhotoResizer lang={lang} onBack={handleBackToHome} />}
+            {activeTool === 'age-calculator' && <AgeCalculator lang={lang} onBack={handleBackToHome} />}
+            {activeTool === 'watermark' && <DocumentWatermark lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'passport-sheet' && <PassportPhotoSheet lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'id-joiner' && <IdCardJoiner lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'affidavit' && <AffidavitGenerator lang={lang} onBack={handleBackToHome} />}
@@ -112,13 +117,16 @@ const Index = () => {
       </div>
 
       <footer className="bg-white border-t border-slate-200 py-8 mt-12 text-center text-xs text-gray-500">
-        <div className="max-w-7xl mx-auto px-4">
-          <p className="font-semibold text-gray-700 text-sm mb-1">
+        <div className="max-w-7xl mx-auto px-4 space-y-3">
+          <p className="font-semibold text-gray-700 text-sm">
             {lang === 'hi' ? 'मेरा डॉक्यूमेंट (Mera Document) • भारत का अपना AI प्लेटफार्म' : 'Mera Document • India’s AI Document Platform'}
           </p>
-          <p className="mb-4">
+          <p>
             {lang === 'hi' ? 'सभी टूल 100% सुरक्षित और मुफ्त हैं' : 'All tools are 100% free and private'}
           </p>
+          <div>
+            <PrivacyPolicyModal lang={lang} />
+          </div>
           <MadeWithDyad />
         </div>
       </footer>
