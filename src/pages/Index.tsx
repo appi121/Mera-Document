@@ -40,6 +40,7 @@ const Index = () => {
   const getPdfToolMode = (toolId: string): PdfToolMode => {
     switch (toolId) {
       case 'pdf-to-word': return 'pdf-to-word';
+      case 'pdf-to-excel': return 'pdf-to-excel';
       case 'word-to-pdf': return 'word-to-pdf';
       case 'excel-to-pdf': return 'excel-to-pdf';
       case 'ppt-to-pdf': return 'ppt-to-pdf';
@@ -55,6 +56,7 @@ const Index = () => {
     if (!toolId) return false;
     return [
       'pdf-to-word',
+      'pdf-to-excel',
       'word-to-pdf',
       'excel-to-pdf',
       'ppt-to-pdf',

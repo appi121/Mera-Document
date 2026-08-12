@@ -37,7 +37,7 @@ interface ToolGridProps {
 }
 
 export const toolsData: ToolItem[] = [
-  // 1st to 5th Tools (यूर्जर की आवश्यकतानुसार टॉप 5 का क्रम)
+  // 1st to 5th Tools (टॉप 5 का क्रम)
   {
     id: 'pdf-to-word',
     titleHi: '📄 PDF to Word (स्कैन OCR स्पेशल)',
@@ -92,6 +92,19 @@ export const toolsData: ToolItem[] = [
     category: 'utilities',
     badgeHi: '5th टूल',
     badgeEn: 'Top #5 Tool',
+  },
+
+  // PDF to Excel
+  {
+    id: 'pdf-to-excel',
+    titleHi: '📊 PDF to Excel (AI Table Extractor)',
+    titleEn: '📊 PDF to Excel Converter (AI Table)',
+    descHi: 'PDF एवं स्कैन टेबल्स से डाटा निकालकर तुरंत Excel (.xls) शीट में बदलें',
+    descEn: 'Extract tables and data from PDF into editable Excel sheets',
+    icon: 'excel-to-pdf',
+    category: 'pdf',
+    badgeHi: 'नया टूल',
+    badgeEn: 'New Tool',
   },
 
   // अन्य सभी मुख्य व उपयोगी टूल्स
