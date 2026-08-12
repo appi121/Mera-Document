@@ -4,6 +4,8 @@ import { Header } from '@/components/Header';
 import { HeroBanner } from '@/components/HeroBanner';
 import { ToolGrid } from '@/components/ToolGrid';
 import { AdBanner } from '@/components/AdBanner';
+import { SocialShareWidget } from '@/components/SocialShareWidget';
+import { FaqSection } from '@/components/FaqSection';
 import { PdfTools, PdfToolMode } from '@/components/tools/PdfTools';
 import { ResumeBuilder } from '@/components/tools/ResumeBuilder';
 import { Translator } from '@/components/tools/Translator';
@@ -86,6 +88,14 @@ const Index = () => {
               searchQuery={searchQuery} 
               onSelectTool={(toolId) => setActiveTool(toolId)} 
             />
+
+            {/* Viral WhatsApp Share Banner */}
+            <div className="px-4">
+              <SocialShareWidget lang={lang} />
+            </div>
+
+            {/* SEO FAQ Accordion */}
+            <FaqSection lang={lang} />
           </>
         ) : (
           <div className="py-6">
