@@ -25,6 +25,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ lang, searchQuery, setSe
     }
   };
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const toolsElement = document.getElementById('tools');
+    if (toolsElement) {
+      toolsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const handleClearSearch = () => {
     setSearchQuery('');
   };
@@ -81,29 +89,36 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ lang, searchQuery, setSe
           </div>
         )}
 
-        {/* Search Bar */}
-        <div className="max-w-xl mx-auto relative shadow-lg rounded-2xl bg-white p-2 border-2 border-orange-300 focus-within:border-orange-500 transition-colors">
-          <div className="flex items-center px-3">
-            <Search className="w-5 h-5 text-orange-600 mr-2 shrink-0" />
+        {/* Search Bar Form */}
+        <form onSubmit={handleSearchSubmit} className="max-w-xl mx-auto shadow-lg rounded-2xl bg-white p-2 border-2 border-orange-300 focus-within:border-orange-500 transition-colors">
+          <div className="flex items-center gap-2 pl-3 pr-1">
+            <Search className="w-5 h-5 text-orange-600 shrink-0" />
             <Input
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder={lang === 'hi' ? 'टूल खोजें (जैसे: PDF, Word, Excel, फोटो रिसाइज़र, रिज्यूमे, OCR...)' : 'Search tool (e.g. PDF, Word, Excel, Photo resizer, Resume, OCR...)'}
-              className="border-none shadow-none focus-visible:ring-0 text-sm sm:text-base placeholder:text-gray-400 p-1"
+              className="border-none shadow-none focus-visible:ring-0 text-sm sm:text-base placeholder:text-gray-400 p-1 flex-1 min-w-0"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={handleClearSearch}
-                className="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                className="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors shrink-0"
                 title="Clear search"
               >
                 <X className="w-5 h-5" />
               </button>
             )}
+            <Button 
+              type="submit" 
+              className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl shadow shrink-0 gap-1.5"
+            >
+              <Search className="w-4 h-4" />
+              <span>{lang === 'hi' ? 'खोजें' : 'Search'}</span>
+            </Button>
           </div>
-        </div>
+        </form>
 
         {/* Badges */}
         <div className="mt-8 flex flex-wrap justify-center items-center gap-6 text-xs sm:text-sm text-gray-600 font-medium">
