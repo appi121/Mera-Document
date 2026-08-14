@@ -1,0 +1,19 @@
+{
+  "short_name": "Mera Document",
+  "name": "मेरा डॉक्यूमेंट • AI PDF & Govt Form Tools",
+  "icons": [
+    {
+      "src": "/placeholder.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#ea580c",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "description": "भारत का अपना 100% मुफ़्त AI डॉक्यूमेंट प्लेटफ़ॉर्म - PDF to Word, Photo Resizer (20KB/50KB), Passport Sheet & AI Resume Builder"
+}

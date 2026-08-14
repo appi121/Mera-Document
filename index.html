@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#ea580c" />
     
     <!-- Primary SEO Meta Tags -->
     <title>मेरा डॉक्यूमेंट (Mera Document) • Free AI PDF, Resume, Photo Resizer & Govt Form Tools</title>
@@ -20,20 +22,18 @@
     <meta property="og:description" content="एक ही जगह सभी डॉक्यूमेंट्स बनाएं, ट्रांसलेट और एडिट करें। PDF to Word, Photo Resizer, Passport Sheet & Resume Builder." />
     <meta property="og:image" content="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80" />
 
-    <!-- Twitter Preview -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:title" content="मेरा डॉक्यूमेंट • Free AI Document Tools" />
-    <meta property="twitter:description" content="PDF Edit, Photo Resizer under 20KB/50KB, Passport Photo Sheet & AI Resume Builder." />
-    <meta property="twitter:image" content="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80" />
-
-    <!-- Google AdSense Script Placeholder (Replace client ID when approved) -->
-    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
-
     <link rel="icon" type="image/svg+xml" href="/placeholder.svg" />
   </head>
 
   <body class="bg-slate-50 text-slate-900 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW reg error:', err));
+        });
+      }
+    </script>
   </body>
 </html>
