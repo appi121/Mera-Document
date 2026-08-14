@@ -10,4 +10,5 @@ export interface ToolItem {
   category: 'popular' | 'pdf' | 'ai' | 'utilities';
   badgeHi?: string;
   badgeEn?: string;
+  keywords?: string;
 }

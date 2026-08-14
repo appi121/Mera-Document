@@ -3,6 +3,7 @@ import { Language, ToolItem } from '@/types/document';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AdBanner } from '@/components/AdBanner';
+import { Button } from '@/components/ui/button';
 import { 
   FileText, 
   UserCheck, 
@@ -29,8 +30,7 @@ import {
   Keyboard,
   Receipt,
   Brain,
-  Sparkles,
-  Bot
+  X
 } from 'lucide-react';
 
 interface ToolGridProps {
@@ -51,6 +51,7 @@ export const toolsData: ToolItem[] = [
     category: 'ai',
     badgeHi: 'ChatGPT & DeepSeek AI',
     badgeEn: 'ChatGPT & DeepSeek AI',
+    keywords: 'ai studio copilot chatgpt deepseek gemini fix grammar spelling correction formal letter memo summary translate photo text prompt'
   },
   // 1st to 5th Tools
   {
@@ -63,6 +64,7 @@ export const toolsData: ToolItem[] = [
     category: 'popular',
     badgeHi: 'टॉप 1 टूल',
     badgeEn: 'Top #1 Tool',
+    keywords: 'pdf to word convert doc docx scanner ocr photo to word text edit'
   },
   {
     id: 'word-to-pdf',
@@ -74,6 +76,7 @@ export const toolsData: ToolItem[] = [
     category: 'pdf',
     badgeHi: '2nd टूल',
     badgeEn: 'Top #2 Tool',
+    keywords: 'word to pdf doc to pdf convert docx file'
   },
   {
     id: 'excel-to-pdf',
@@ -85,6 +88,7 @@ export const toolsData: ToolItem[] = [
     category: 'pdf',
     badgeHi: '3rd टूल',
     badgeEn: 'Top #3 Tool',
+    keywords: 'excel to pdf xls xlsx sheet convert table'
   },
   {
     id: 'ppt-to-pdf',
@@ -96,6 +100,7 @@ export const toolsData: ToolItem[] = [
     category: 'pdf',
     badgeHi: '4th टूल',
     badgeEn: 'Top #4 Tool',
+    keywords: 'ppt to pdf powerpoint slides convert pptx'
   },
   {
     id: 'excel',
@@ -107,6 +112,7 @@ export const toolsData: ToolItem[] = [
     category: 'utilities',
     badgeHi: '5th टूल',
     badgeEn: 'Top #5 Tool',
+    keywords: 'excel formula vlookup sum gst calculation helper assistant sheet'
   },
 
   // PDF to Excel
@@ -120,6 +126,7 @@ export const toolsData: ToolItem[] = [
     category: 'pdf',
     badgeHi: 'नया टूल',
     badgeEn: 'New Tool',
+    keywords: 'pdf to excel table extractor xls xlsx grid matrix converter'
   },
 
   // अन्य मुख्य टूल्स
@@ -133,6 +140,7 @@ export const toolsData: ToolItem[] = [
     category: 'popular',
     badgeHi: 'सरकारी फॉर्म स्पेशल',
     badgeEn: 'Govt Form Special',
+    keywords: 'photo resizer signature resize 20kb 50kb compress image ssc railway police bank form'
   },
   {
     id: 'ocr',
@@ -144,6 +152,7 @@ export const toolsData: ToolItem[] = [
     category: 'utilities',
     badgeHi: 'AI OCR',
     badgeEn: 'AI OCR',
+    keywords: 'ocr photo to text image text extractor hindi english reader scanner paper'
   },
   {
     id: 'resume',
@@ -155,6 +164,7 @@ export const toolsData: ToolItem[] = [
     category: 'ai',
     badgeHi: 'AI पावर',
     badgeEn: 'AI Powered',
+    keywords: 'resume builder biodata cv maker job create pdf resume'
   },
   {
     id: 'translate',
@@ -166,6 +176,7 @@ export const toolsData: ToolItem[] = [
     category: 'ai',
     badgeHi: 'अनिवार्य',
     badgeEn: 'Essential',
+    keywords: 'translate translator hindi english translation anuvad bhasha'
   },
   {
     id: 'letter',
@@ -175,6 +186,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Auto-generate leave, bank & official complaint applications',
     icon: 'letter',
     category: 'ai',
+    keywords: 'letter writer application leave request bank application pradhanacharya aavedan patra'
   },
   {
     id: 'govt',
@@ -184,6 +196,9 @@ export const toolsData: ToolItem[] = [
     descEn: 'Complete guide & document checklist for Indian Govt Forms',
     icon: 'govt',
     category: 'popular',
+    badgeHi: 'गाइड',
+    badgeEn: 'Guide',
+    keywords: 'govt form income certificate caste certificate pan card checklist documents'
   },
   {
     id: 'signature',
@@ -193,6 +208,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Create transparent PNG signatures by typing or drawing',
     icon: 'signature',
     category: 'utilities',
+    keywords: 'signature maker digital sign draw signature transparent png hastakshar'
   },
   {
     id: 'passport-sheet',
@@ -204,10 +220,11 @@ export const toolsData: ToolItem[] = [
     category: 'popular',
     badgeHi: 'मोस्ट वांटेड',
     badgeEn: 'Most Popular',
+    keywords: 'passport photo sheet printable 4x6 a4 copies 8 photos 30 photos print'
   },
   {
     id: 'id-joiner',
-    titleHi: '🪪 आधार/ID कार्ड फ्रंट-बैक जोडर',
+    titleHi: '🪪 आधार/ID CARD फ्रंट-बैक जोडर',
     titleEn: '🪪 ID Card Front & Back Joiner',
     descHi: 'आधार, पैन व वोटर ID कार्ड के आगे-पीछे का भाग 1 पेज में जोड़ें',
     descEn: 'Combine Front and Back of Aadhaar, PAN or Voter ID onto 1 page',
@@ -215,6 +232,7 @@ export const toolsData: ToolItem[] = [
     category: 'popular',
     badgeHi: 'बहुत उपयोगी',
     badgeEn: 'Must Have',
+    keywords: 'aadhaar joiner id card join front back side combine one page printable'
   },
   {
     id: 'age-calculator',
@@ -224,6 +242,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Calculate exact age in Years, Months, Days on job cut-off date',
     icon: 'age-calculator',
     category: 'popular',
+    keywords: 'age calculator dob date of birth cutoff age calculate year month day'
   },
   {
     id: 'image-converter',
@@ -233,6 +252,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Convert WEBP/PNG to JPG & squeeze image to exact KB size',
     icon: 'image-converter',
     category: 'popular',
+    keywords: 'image converter webp to jpg png to jpg compress target kb squeeze photo'
   },
   {
     id: 'watermark',
@@ -244,6 +264,7 @@ export const toolsData: ToolItem[] = [
     category: 'popular',
     badgeHi: 'सुरक्षा स्पेशल',
     badgeEn: 'Anti-Fraud',
+    keywords: 'watermark document security kyc protection anti fraud aadhaar safe stamp'
   },
   {
     id: 'affidavit',
@@ -255,6 +276,7 @@ export const toolsData: ToolItem[] = [
     category: 'utilities',
     badgeHi: 'लीगल',
     badgeEn: 'Legal Draft',
+    keywords: 'affidavit generator shapath patra gap year name correction income declaration legal draft'
   },
   {
     id: 'typing-counter',
@@ -264,6 +286,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Count words & characters, measure exam WPM typing speed',
     icon: 'typing-counter',
     category: 'utilities',
+    keywords: 'word counter character count typing speed test wpm timer passage practice'
   },
   {
     id: 'gst-calculator',
@@ -275,6 +298,7 @@ export const toolsData: ToolItem[] = [
     category: 'utilities',
     badgeHi: 'दुकानदार स्पेशल',
     badgeEn: 'Bill & Receipt',
+    keywords: 'gst bill calculator cgst sgst receipt whatsapp bill customer shopkeeper'
   },
   {
     id: 'img-to-pdf',
@@ -284,6 +308,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Convert JPG, PNG photos into single PDF file',
     icon: 'img-to-pdf',
     category: 'pdf',
+    keywords: 'image to pdf jpg to pdf png to pdf photo to pdf'
   },
   {
     id: 'merge-pdf',
@@ -293,6 +318,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Combine multiple PDF files into one single PDF',
     icon: 'merge-pdf',
     category: 'pdf',
+    keywords: 'merge pdf combine pdf join pdf multiple pdf'
   },
   {
     id: 'compress-pdf',
@@ -302,6 +328,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Reduce PDF file size without losing quality',
     icon: 'compress-pdf',
     category: 'pdf',
+    keywords: 'compress pdf reduce pdf size mb to kb small pdf'
   },
   {
     id: 'split-pdf',
@@ -311,6 +338,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Extract or split pages from large PDF document',
     icon: 'split-pdf',
     category: 'pdf',
+    keywords: 'split pdf cut pdf extract pages separate pdf'
   },
   {
     id: 'templates',
@@ -320,82 +348,106 @@ export const toolsData: ToolItem[] = [
     descEn: 'Ready formats for rent agreement, receipts, salary slips',
     icon: 'templates',
     category: 'popular',
+    keywords: 'document templates rent agreement payment receipt salary slip experience letter'
   },
 ];
 
 export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectTool }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
-  const filteredTools = toolsData.filter(t => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = (
-      t.titleHi.toLowerCase().includes(query) ||
-      t.titleEn.toLowerCase().includes(query) ||
-      t.descHi.toLowerCase().includes(query) ||
-      t.descEn.toLowerCase().includes(query)
-    );
+  const cleanQuery = searchQuery.trim().toLowerCase();
 
-    if (activeCategory === 'all') return matchesSearch;
-    if (activeCategory === 'pdf') return matchesSearch && (t.category === 'pdf' || t.id.includes('pdf'));
-    if (activeCategory === 'govt') return matchesSearch && (t.id === 'photo-resizer' || t.id === 'image-converter' || t.id === 'age-calculator' || t.id === 'watermark' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
-    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities' || t.id === 'ai-studio' || t.id === 'excel' || t.id === 'typing-counter' || t.id === 'gst-calculator');
+  const filteredTools = toolsData.filter(t => {
+    if (!cleanQuery) {
+      if (activeCategory === 'all') return true;
+      if (activeCategory === 'pdf') return t.category === 'pdf' || t.id.includes('pdf');
+      if (activeCategory === 'govt') return (t.id === 'photo-resizer' || t.id === 'image-converter' || t.id === 'age-calculator' || t.id === 'watermark' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
+      if (activeCategory === 'ai') return (t.category === 'ai' || t.category === 'utilities' || t.id === 'ai-studio' || t.id === 'excel' || t.id === 'typing-counter' || t.id === 'gst-calculator');
+      return true;
+    }
+
+    // Deep Search Matching across title, description, badges, id and keywords
+    const matchesSearch = (
+      t.titleHi.toLowerCase().includes(cleanQuery) ||
+      t.titleEn.toLowerCase().includes(cleanQuery) ||
+      t.descHi.toLowerCase().includes(cleanQuery) ||
+      t.descEn.toLowerCase().includes(cleanQuery) ||
+      t.id.toLowerCase().includes(cleanQuery) ||
+      (t.badgeHi && t.badgeHi.toLowerCase().includes(cleanQuery)) ||
+      (t.badgeEn && t.badgeEn.toLowerCase().includes(cleanQuery)) ||
+      (t.keywords && t.keywords.toLowerCase().includes(cleanQuery))
+    );
 
     return matchesSearch;
   });
 
   return (
-    <section id="tools" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <section id="tools" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 scroll-mt-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-            {lang === 'hi' ? 'सभी टूल एक ही जगह' : 'All Tools in One Place'}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              {lang === 'hi' ? 'सभी टूल एक ही जगह' : 'All Tools in One Place'}
+            </h2>
+            {cleanQuery && (
+              <Badge className="bg-orange-600 text-white font-bold text-xs px-2.5 py-0.5">
+                {filteredTools.length} {lang === 'hi' ? 'टूल मिले' : 'found'}
+              </Badge>
+            )}
+          </div>
           <p className="text-gray-500 text-sm mt-1">
-            {lang === 'hi' ? 'अपनी आवश्यकतानुसार श्रेणी या टूल पर क्लिक करें:' : 'Select a category or click on any tool:'}
+            {cleanQuery 
+              ? (lang === 'hi' ? `"${searchQuery}" से संबंधित टूल नीचे दिए गए हैं:` : `Showing results for "${searchQuery}":`)
+              : (lang === 'hi' ? 'अपनी आवश्यकतानुसार श्रेणी या टूल पर क्लिक करें:' : 'Select a category or click on any tool:')}
           </p>
         </div>
 
         {/* Category Tabs */}
-        <div className="flex flex-wrap gap-1.5 bg-gray-100 p-1.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-medium">
-          <button
-            onClick={() => setActiveCategory('all')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              activeCategory === 'all' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {lang === 'hi' ? 'सभी (All)' : 'All Tools'}
-          </button>
-          <button
-            onClick={() => setActiveCategory('ai')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              activeCategory === 'ai' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {lang === 'hi' ? '🤖 AI सह-पायलट' : 'AI Copilot'}
-          </button>
-          <button
-            onClick={() => setActiveCategory('pdf')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              activeCategory === 'pdf' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {lang === 'hi' ? '📄 PDF टूल' : 'PDF Tools'}
-          </button>
-          <button
-            onClick={() => setActiveCategory('govt')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              activeCategory === 'govt' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {lang === 'hi' ? '🖼️ फॉर्म, फोटो व ID' : 'Forms & Photos'}
-          </button>
-        </div>
+        {!cleanQuery && (
+          <div className="flex flex-wrap gap-1.5 bg-gray-100 p-1.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-medium">
+            <button
+              onClick={() => setActiveCategory('all')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                activeCategory === 'all' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {lang === 'hi' ? 'सभी (All)' : 'All Tools'}
+            </button>
+            <button
+              onClick={() => setActiveCategory('ai')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                activeCategory === 'ai' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {lang === 'hi' ? '🤖 AI सह-पायलट' : 'AI Copilot'}
+            </button>
+            <button
+              onClick={() => setActiveCategory('pdf')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                activeCategory === 'pdf' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {lang === 'hi' ? '📄 PDF टूल' : 'PDF Tools'}
+            </button>
+            <button
+              onClick={() => setActiveCategory('govt')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                activeCategory === 'govt' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {lang === 'hi' ? '🖼️ फॉर्म, फोटो व ID' : 'Forms & Photos'}
+            </button>
+          </div>
+        )}
       </div>
 
       {filteredTools.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-          <p className="text-gray-500 font-medium">
-            {lang === 'hi' ? 'कोई टूल नहीं मिला। कृपया अलग शब्द खोजें।' : 'No tools found matching your query.'}
+        <div className="text-center py-12 bg-orange-50/50 rounded-2xl border border-dashed border-orange-200 space-y-3">
+          <p className="text-gray-700 font-bold text-base">
+            {lang === 'hi' ? `"${searchQuery}" का कोई टूल नहीं मिला` : `No tools found for "${searchQuery}"`}
+          </p>
+          <p className="text-xs text-gray-500">
+            {lang === 'hi' ? 'कृपया अलग शब्द खोजें जैसे PDF, Word, Excel, फोटो, फॉर्म या AI' : 'Try searching for terms like PDF, Word, Excel, Photo, Form or AI'}
           </p>
         </div>
       ) : (

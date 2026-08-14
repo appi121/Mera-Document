@@ -1,6 +1,6 @@
 import React from 'react';
 import { Language } from '@/types/document';
-import { Search, Sparkles, ShieldCheck, Zap, Heart, Brain, Bot } from 'lucide-react';
+import { Search, Sparkles, ShieldCheck, Zap, Heart, Brain, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -12,6 +12,23 @@ interface HeroBannerProps {
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({ lang, searchQuery, setSearchQuery, onOpenAiStudio }) => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    // Smooth scroll to tools grid if user starts typing
+    if (value.trim().length > 0) {
+      const toolsElement = document.getElementById('tools');
+      if (toolsElement) {
+        toolsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+  };
+
   return (
     <div className="relative overflow-hidden bg-gradient-to-b from-orange-50 via-amber-50/40 to-white py-12 md:py-16 px-4 sm:px-6 lg:px-8 border-b border-orange-100">
       <div className="max-w-4xl mx-auto text-center relative z-10">
@@ -65,16 +82,26 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ lang, searchQuery, setSe
         )}
 
         {/* Search Bar */}
-        <div className="max-w-xl mx-auto relative shadow-lg rounded-2xl bg-white p-2 border border-orange-200">
+        <div className="max-w-xl mx-auto relative shadow-lg rounded-2xl bg-white p-2 border-2 border-orange-300 focus-within:border-orange-500 transition-colors">
           <div className="flex items-center px-3">
-            <Search className="w-5 h-5 text-gray-400 mr-2 shrink-0" />
+            <Search className="w-5 h-5 text-orange-600 mr-2 shrink-0" />
             <Input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={lang === 'hi' ? 'टूल खोजें (जैसे: AI स्टूडियो, रिज्यूमे, PDF, OCR, फॉर्म...)' : 'Search tool (e.g. AI Studio, Resume, PDF, OCR, Form...)'}
-              className="border-none shadow-none focus-visible:ring-0 text-sm sm:text-base placeholder:text-gray-400"
+              onChange={handleSearchChange}
+              placeholder={lang === 'hi' ? 'टूल खोजें (जैसे: PDF, Word, Excel, फोटो रिसाइज़र, रिज्यूमे, OCR...)' : 'Search tool (e.g. PDF, Word, Excel, Photo resizer, Resume, OCR...)'}
+              className="border-none shadow-none focus-visible:ring-0 text-sm sm:text-base placeholder:text-gray-400 p-1"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                title="Clear search"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
 
