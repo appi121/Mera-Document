@@ -27,7 +27,10 @@ import {
   ShieldCheck,
   RefreshCw,
   Keyboard,
-  Receipt
+  Receipt,
+  Brain,
+  Sparkles,
+  Bot
 } from 'lucide-react';
 
 interface ToolGridProps {
@@ -37,7 +40,19 @@ interface ToolGridProps {
 }
 
 export const toolsData: ToolItem[] = [
-  // 1st to 5th Tools (टॉप 5 का क्रम)
+  // #1 Featured Universal AI Tool
+  {
+    id: 'ai-studio',
+    titleHi: '🤖 AI डॉक्यूमेंट स्टूडियो & सह-पायलट',
+    titleEn: '🤖 Universal AI Document Studio & Copilot',
+    descHi: 'ChatGPT/DeepSeek पावर: किसी भी डॉक्यूमेंट का 1-क्लिक में त्रुटि सुधार, शासकीय फॉर्मेटिंग व टेबल एक्सट्रेक्शन',
+    descEn: 'ChatGPT & DeepSeek style AI: Instant grammar fix, official formatting, table grid & translation',
+    icon: 'ai-studio',
+    category: 'ai',
+    badgeHi: 'ChatGPT & DeepSeek AI',
+    badgeEn: 'ChatGPT & DeepSeek AI',
+  },
+  // 1st to 5th Tools
   {
     id: 'pdf-to-word',
     titleHi: '📄 PDF to Word (स्कैन OCR स्पेशल)',
@@ -107,7 +122,7 @@ export const toolsData: ToolItem[] = [
     badgeEn: 'New Tool',
   },
 
-  // अन्य सभी मुख्य व उपयोगी टूल्स
+  // अन्य मुख्य टूल्स
   {
     id: 'photo-resizer',
     titleHi: '🖼️ फोटो व सिग्नेचर रिसाइज़र',
@@ -323,7 +338,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
     if (activeCategory === 'all') return matchesSearch;
     if (activeCategory === 'pdf') return matchesSearch && (t.category === 'pdf' || t.id.includes('pdf'));
     if (activeCategory === 'govt') return matchesSearch && (t.id === 'photo-resizer' || t.id === 'image-converter' || t.id === 'age-calculator' || t.id === 'watermark' || t.id === 'passport-sheet' || t.id === 'id-joiner' || t.id === 'govt' || t.id === 'affidavit');
-    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities' || t.id === 'excel' || t.id === 'typing-counter' || t.id === 'gst-calculator');
+    if (activeCategory === 'ai') return matchesSearch && (t.category === 'ai' || t.category === 'utilities' || t.id === 'ai-studio' || t.id === 'excel' || t.id === 'typing-counter' || t.id === 'gst-calculator');
 
     return matchesSearch;
   });
@@ -351,6 +366,14 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
             {lang === 'hi' ? 'सभी (All)' : 'All Tools'}
           </button>
           <button
+            onClick={() => setActiveCategory('ai')}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              activeCategory === 'ai' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {lang === 'hi' ? '🤖 AI सह-पायलट' : 'AI Copilot'}
+          </button>
+          <button
             onClick={() => setActiveCategory('pdf')}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               activeCategory === 'pdf' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
@@ -365,14 +388,6 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
             }`}
           >
             {lang === 'hi' ? '🖼️ फॉर्म, फोटो व ID' : 'Forms & Photos'}
-          </button>
-          <button
-            onClick={() => setActiveCategory('ai')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              activeCategory === 'ai' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {lang === 'hi' ? '🤖 AI व यूटिलिटीज' : 'AI & Utilities'}
           </button>
         </div>
       </div>
@@ -390,11 +405,16 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
               <Card
                 key={tool.id}
                 onClick={() => onSelectTool(tool.id)}
-                className="group cursor-pointer border-orange-100/80 hover:border-orange-400 bg-white hover:bg-gradient-to-br hover:from-white hover:to-orange-50/30 transition-all duration-300 hover:shadow-xl rounded-2xl p-6 relative flex flex-col justify-between"
+                className={`group cursor-pointer transition-all duration-300 hover:shadow-xl rounded-2xl p-6 relative flex flex-col justify-between ${
+                  tool.id === 'ai-studio'
+                    ? 'border-2 border-orange-500 bg-gradient-to-br from-orange-50/60 via-amber-50/30 to-white shadow-md hover:border-orange-600'
+                    : 'border-orange-100/80 hover:border-orange-400 bg-white hover:bg-gradient-to-br hover:from-white hover:to-orange-50/30'
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
+                      {tool.icon === 'ai-studio' && <Brain className="w-6 h-6 text-orange-600" />}
                       {tool.icon === 'photo-resizer' && <ImageIcon className="w-6 h-6" />}
                       {tool.icon === 'image-converter' && <RefreshCw className="w-6 h-6" />}
                       {tool.icon === 'gst-calculator' && <Receipt className="w-6 h-6" />}
