@@ -24,6 +24,7 @@ import { PassportPhotoSheet } from '@/components/tools/PassportPhotoSheet';
 import { AffidavitGenerator } from '@/components/tools/AffidavitGenerator';
 import { AgeCalculator } from '@/components/tools/AgeCalculator';
 import { DocumentWatermark } from '@/components/tools/DocumentWatermark';
+import { AiDocumentStudio } from '@/components/tools/AiDocumentStudio';
 import { PrivacyPolicyModal } from '@/components/PrivacyPolicyModal';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
@@ -34,6 +35,11 @@ const Index = () => {
 
   const handleBackToHome = () => {
     setActiveTool(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectTool = (toolId: string) => {
+    setActiveTool(toolId);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -75,6 +81,7 @@ const Index = () => {
           lang={lang} 
           setLang={setLang} 
           onHomeClick={handleBackToHome} 
+          onSelectTool={handleSelectTool}
         />
 
         {!activeTool ? (
@@ -83,6 +90,7 @@ const Index = () => {
               lang={lang} 
               searchQuery={searchQuery} 
               setSearchQuery={setSearchQuery} 
+              onOpenAiStudio={() => handleSelectTool('ai-studio')}
             />
             
             {/* Monetization Slot below Hero */}
@@ -91,7 +99,7 @@ const Index = () => {
             <ToolGrid 
               lang={lang} 
               searchQuery={searchQuery} 
-              onSelectTool={(toolId) => setActiveTool(toolId)} 
+              onSelectTool={handleSelectTool} 
             />
 
             {/* Viral WhatsApp Share Banner */}
@@ -106,6 +114,7 @@ const Index = () => {
           <div className="py-6">
             <AdBanner />
 
+            {activeTool === 'ai-studio' && <AiDocumentStudio lang={lang} onBack={handleBackToHome} />}
             {isPdfTool(activeTool) && (
               <PdfTools 
                 lang={lang} 
