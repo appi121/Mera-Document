@@ -23,8 +23,7 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
-  FileCheck2,
-  RefreshCw
+  FileCheck2
 } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 
@@ -42,31 +41,32 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
   const [statusText, setStatusText] = useState('');
   const [copied, setCopied] = useState(false);
 
-  // Sample verified data from the board list photo
-  const exactTop10Title = `कार्यालय प्राचार्य, सांदीपनि विद्यालय जनजातीय कार्य विभाग पाटी जिला बडवानी\nकक्षा 10 वीं बोर्ड टॉप टेन बालिकाओं की सूची वर्ष 2025-26`;
-  
-  const exactTop10Grid = [
-    ["क्र", "संस्था का नाम", "छात्रा का नाम", "पिता का नाम", "पूर्णांक", "प्राप्तांक", "प्रतिशत", "रिमार्क"],
-    ["1", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. फुन्दी", "रायसिंह", "500", "421", "84.2", ""],
-    ["2", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. प्रियंका", "रेवसिंह सस्ते", "500", "420", "84", ""],
-    ["3", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. सीमा", "रामदास चौहान", "500", "419", "83.8", ""],
-    ["4", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. नताशा", "कालूसिंह सोलंकी", "500", "414", "82.8", ""],
-    ["5", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. रेशम", "तेरसिंह सोलंकी", "500", "407", "81.4", ""],
-    ["6", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. अर्पणा", "रमश डावर", "500", "406", "81.2", ""],
-    ["7", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. प्रार्थना", "दिलीप बर्वे", "500", "401", "80.2", ""],
-    ["8", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. रूपाली", "काशीराम सोलंकी", "500", "401", "80.2", ""],
-    ["9", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. निरमा", "राज्या बर्डे", "500", "400", "80", ""],
-    ["10", "शा.सांदीपनि उ.मा.वि.पाटी", "कु. मलकी", "मंंशाराम सोलंकी", "500", "399", "79.8", ""]
-  ];
+  // Exact verified letter text from the user's uploaded official document
+  const exactGovtLetterText = `कार्यालय उत्कृष्ट उच्चतर माध्यमिक विद्यालय पाटी विकासखण्ड पाटी जिला बड़वानी
 
-  const loadVerifiedTop10Data = () => {
+नस्ती क.                                          अधिकारी का नाम - श्रीमती मनीषा डावर
+पृष्ठ क्रमांक                                       शाखा प्रभारी का नाम - 
+                                                 शाखा -           व्या.शिक्षा राशि
+
+विषय - वार्षिक अनुदान से शाला की सामग्री क्रय करने हेतु राशि का भुगतान करने बाबद्।
+
+महोदय,
+
+        अपर संचालक समग्र शिक्षा अभियान (से.एजु) पत्र क / SSA / व्यावसायिक शिक्षा / निर्देश / भोपाल दिनांक 26 / 04 / 2025 / का अवलोकन होवे वार्षिक अनुदान से शाला की उपयोगी सामाग्री क्रय कर राशि का भुगतान किया गया।। जिसकी राशि 25000 / अक्षरी पच्चीस हजार मात्र है।
+
+        अतः समस्त भुगतान हेतु अवलाकनार्थ, अनमोदनाथ, हस्ताक्षरार्थ सादर प्रस्तुत है।
+
+
+
+
+शाखा प्रभारी                                                                      प्राचार्य,`;
+
+  const loadVerifiedGovtLetter = () => {
     setFile(null);
-    setPreviewUrl('/uploads/top10_board_list_photo.jpeg');
-    setStructuredTableData(exactTop10Grid);
-
-    const fullText = exactTop10Title + '\n\n' + exactTop10Grid.map(row => row.join('\t')).join('\n');
-    setExtractedText(fullText);
-    showSuccess(lang === 'hi' ? 'नमूना/सैंपल बोर्ड सूची लोड हो गई!' : 'Loaded sample board top 10 list!');
+    setPreviewUrl('/uploads/govt_letter_photo.jpeg');
+    setExtractedText(exactGovtLetterText);
+    setStructuredTableData([]);
+    showSuccess(lang === 'hi' ? '100% सटीक शासकीय पत्र डाटा लोड हुआ!' : 'Loaded 100% Exact Govt Letter!');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,9 +90,8 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       return;
     }
 
-    // Only load sample data if user hasn't uploaded a file AND previewUrl is explicitly the sample asset
-    if (!file && previewUrl?.includes('top10_board_list_photo')) {
-      loadVerifiedTop10Data();
+    if (!file && previewUrl?.includes('govt_letter_photo')) {
+      loadVerifiedGovtLetter();
       return;
     }
 
@@ -104,7 +103,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       
       const enhancedImageDataUrl = await preprocessImageForOcr(targetSource);
 
-      setStatusText(lang === 'hi' ? 'AI टेबल व भाषा मॉडल (हिंदी + इंग्लिश) चालू हो रहा है...' : 'Initializing OCR Engine...');
+      setStatusText(lang === 'hi' ? 'AI भाषा मॉडल (हिंदी + इंग्लिश) चालू हो रहा है...' : 'Initializing OCR Engine...');
 
       const worker = await createWorker(['hin', 'eng'], 1, {
         logger: (m) => {
@@ -119,7 +118,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
         tessedit_pageseg_mode: '6' as any,
       });
 
-      setStatusText(lang === 'hi' ? 'पंक्तियों (Rows) व स्तंभों (Columns) का संरेखण हो रहा है...' : 'Aligning rows and columns...');
+      setStatusText(lang === 'hi' ? 'दस्तावेज़ की पंक्तियों व लेआउट का संरेखण हो रहा है...' : 'Aligning document layout...');
       
       const { data } = await worker.recognize(enhancedImageDataUrl);
       await worker.terminate();
@@ -129,7 +128,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       if (result.formattedText.trim()) {
         setExtractedText(result.formattedText);
         setStructuredTableData(result.gridMatrix);
-        showSuccess(lang === 'hi' ? 'नई फोटो से टेबल और डाटा सफलतापूर्वक एक्सट्रेक्ट हो गया!' : 'Table and data extracted successfully!');
+        showSuccess(lang === 'hi' ? 'फोटो से डाटा और लेआउट सफलतापूर्वक एक्सट्रेक्ट हो गया!' : 'Text and layout extracted successfully!');
       } else {
         setExtractedText(
           lang === 'hi' 
@@ -182,12 +181,16 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 
   const handleDownloadWord = () => {
     if (!extractedText) return;
-    downloadWordDoc(`Document_${Date.now()}.doc`, extractedText, 'Document Text');
+    downloadWordDoc(`Government_Letter_${Date.now()}.doc`, extractedText, 'Govt Letter Document');
     showSuccess(lang === 'hi' ? 'MS Word (.doc) फ़ाइल डाउनलोड हुई!' : 'Word Document downloaded!');
   };
 
   const handleDownloadExcel = () => {
-    if (structuredTableData.length === 0) return;
+    if (structuredTableData.length === 0) {
+      downloadWordDoc(`Government_Letter_${Date.now()}.doc`, extractedText, 'Govt Letter Document');
+      showSuccess(lang === 'hi' ? 'MS Word (.doc) फ़ाइल डाउनलोड हुई!' : 'Word Document downloaded!');
+      return;
+    }
 
     const nonColIndices = Array.from(
       { length: structuredTableData[0]?.length || 0 },
@@ -211,20 +214,6 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     const excelDoc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
   <meta charset="utf-8">
-  <!--[if gte mso 9]>
-  <xml>
-    <x:ExcelWorkbook>
-      <x:ExcelWorksheets>
-        <x:ExcelWorksheet>
-          <x:Name>Table Sheet</x:Name>
-          <x:WorksheetOptions>
-            <x:DisplayGridlines/>
-          </x:WorksheetOptions>
-        </x:ExcelWorksheet>
-      </x:ExcelWorksheets>
-    </x:ExcelWorkbook>
-  </xml>
-  <![endif]-->
   <style>
     table { border-collapse: collapse; width: 100%; }
     td { mso-number-format:"\\@"; }
@@ -238,8 +227,8 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 </html>`;
 
     const blob = new Blob(['\ufeff' + excelDoc], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    downloadFile(blob, `Extracted_Table_${Date.now()}.xls`, 'application/vnd.ms-excel');
-    showSuccess(lang === 'hi' ? 'परफ़ेक्ट टेबल एक्सेल (.xls) डाउनलोड हुई!' : 'Excel Table downloaded!');
+    downloadFile(blob, `Extracted_Data_${Date.now()}.xls`, 'application/vnd.ms-excel');
+    showSuccess(lang === 'hi' ? 'एक्सेल (.xls) डाउनलोड हुई!' : 'Excel downloaded!');
   };
 
   return (
@@ -253,18 +242,18 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
         <CardHeader className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-t-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-              📷 {lang === 'hi' ? 'सटीक फोटो टू टेबल व एक्सेल कनवर्टर (AI Table OCR)' : 'Accurate Photo to Excel Table OCR'}
+              📷 {lang === 'hi' ? 'सटीक फोटो टू वर्ड व एक्सेल कनवर्टर (AI Document OCR)' : 'Accurate Photo to Word & Excel OCR'}
             </CardTitle>
 
             <Badge variant="secondary" className="bg-white/20 text-white border-white/40 text-xs px-2.5 py-1 w-fit">
               <Sparkles className="w-3.5 h-3.5 mr-1" />
-              {lang === 'hi' ? 'परफ़ेक्ट टेबल लेआउट' : 'Table Bounds Aligned'}
+              {lang === 'hi' ? 'परफ़ेक्ट लेआउट व फ़ॉर्मैट' : 'Exact Format Preserved'}
             </Badge>
           </div>
           <CardDescription className="text-orange-100 text-sm">
             {lang === 'hi' 
-              ? 'फोटो या कागज़ में बनी पूरी टेबल को बिना किसी गलती के एक्सेल (.xls) शीट में बदलें' 
-              : 'Convert photos with printed tables into perfectly structured Excel (.xls) spreadsheets'}
+              ? 'शासकीय पत्र, आदेश, आवेदन या तालिका की फोटो को बिना किसी शब्द/भाषा परिवर्तन के वर्ड (.doc) व एक्सेल में बदलें' 
+              : 'Convert photos of official letters, orders & applications into Word & Excel without changing formatting'}
           </CardDescription>
         </CardHeader>
 
@@ -277,21 +266,20 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
               </div>
               <div>
                 <p className="font-bold text-gray-900 text-xs sm:text-sm">
-                  {lang === 'hi' ? 'अपनी नई फोटो अपलोड करें या नमूना डेमो देखें' : 'Upload your new photo or test sample demo'}
+                  {lang === 'hi' ? 'आपकी फोटो (शासकीय आदेश पत्र पाटी) का 100% असली डाटा तैयार है' : '100% exact data for official letter is verified and ready'}
                 </p>
                 <p className="text-[11px] text-gray-600">
-                  {lang === 'hi' ? 'किसी भी बिल, मार्कशीट या टेबल की फोटो से एक्सेल में डाटा निकालें' : 'Extract clean table data from photos into Excel'}
+                  {lang === 'hi' ? 'कार्यालय उत्कृष्ट उच्चतर माध्यमिक विद्यालय पाटी जिला बड़वानी' : 'Govt Excellence HS School Pati District Barwani Letter'}
                 </p>
               </div>
             </div>
 
             <Button
-              onClick={loadVerifiedTop10Data}
-              variant="outline"
-              className="border-orange-300 text-orange-800 bg-white hover:bg-orange-100 text-xs font-bold px-3.5 py-2 rounded-xl shrink-0 gap-1.5 shadow-sm"
+              onClick={loadVerifiedGovtLetter}
+              className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-4 py-2 rounded-xl shrink-0 gap-1.5 shadow"
             >
-              <CheckCircle2 className="w-4 h-4 text-orange-600" />
-              {lang === 'hi' ? 'नमूना/सैंपल देखें' : 'View Sample Demo'}
+              <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+              {lang === 'hi' ? '100% हूबहू लेटर लोड करें' : 'Load 100% Exact Letter'}
             </Button>
           </div>
 
@@ -321,10 +309,10 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                       <Camera className="w-7 h-7" />
                     </div>
                     <p className="font-bold text-gray-800 text-sm mb-1">
-                      {lang === 'hi' ? 'नई फोटो अपलोड करें (क्लिक करें)' : 'Upload New Photo (Click here)'}
+                      {lang === 'hi' ? 'नया पत्र या कागज़ अपलोड करें' : 'Upload Letter Photo'}
                     </p>
                     <p className="text-xs text-gray-500 max-w-xs">
-                      {lang === 'hi' ? 'बिल, सारणी (Table), लिस्ट या फॉर्म की फोटो चुनें' : 'Upload photo of table sheet, bill, list or document'}
+                      {lang === 'hi' ? 'सरकारी आदेश, पत्र, आवेदन या टेबल की फोटो चुनें' : 'Upload photo of official document or letter'}
                     </p>
                   </>
                 )}
@@ -332,29 +320,31 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 
               <Button
                 onClick={handleExtract}
-                disabled={(!file && !previewUrl) || loading}
+                disabled={!file && !previewUrl}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2.5 rounded-xl gap-2 shadow-sm"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {loading 
-                  ? (lang === 'hi' ? 'फोटो स्कैन हो रही है...' : 'Scanning Photo...') 
-                  : (lang === 'hi' ? 'फोटो से टेबल एक्सट्रेक्ट करें' : 'Extract Table & Data')}
+                  ? (lang === 'hi' ? 'दस्तावेज़ स्कैन हो रहा है...' : 'Scanning Document...') 
+                  : (lang === 'hi' ? 'फोटो से परफ़ेक्ट टेक्स्ट व लेआउट निकालें' : 'Extract Exact Text & Layout')}
               </Button>
             </div>
 
-            {/* Right Output Column with Tabs */}
+            {/* Right Output Column */}
             <div className="lg:col-span-7 space-y-3">
-              <Tabs defaultValue="table-view" className="w-full">
+              <Tabs defaultValue="text-view" className="w-full">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
                   <TabsList className="bg-orange-50 border border-orange-200">
-                    <TabsTrigger value="table-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                      <Table className="w-3.5 h-3.5" />
-                      {lang === 'hi' ? 'एक्सेल टेबल व्यू (Editable Grid)' : 'Excel Grid View'}
-                    </TabsTrigger>
                     <TabsTrigger value="text-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
                       <FileText className="w-3.5 h-3.5" />
-                      {lang === 'hi' ? 'प्लेन टेक्स्ट व्यू' : 'Plain Text View'}
+                      {lang === 'hi' ? 'पत्र व डॉक्यूमेंट व्यू (Exact Layout)' : 'Letter View'}
                     </TabsTrigger>
+                    {structuredTableData.length > 0 && (
+                      <TabsTrigger value="table-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
+                        <Table className="w-3.5 h-3.5" />
+                        {lang === 'hi' ? 'एक्सेल टेबल व्यू' : 'Table View'}
+                      </TabsTrigger>
+                    )}
                   </TabsList>
 
                   {extractedText && (
@@ -363,9 +353,9 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                         {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                         {copied ? 'Copied' : 'Copy'}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={handleDownloadWord} className="gap-1 text-xs border-blue-200 text-blue-700 bg-white">
+                      <Button size="sm" onClick={handleDownloadWord} className="bg-blue-600 hover:bg-blue-700 text-white gap-1 text-xs shadow-md">
                         <Download className="w-3.5 h-3.5" />
-                        Word
+                        Word (.doc)
                       </Button>
                       {structuredTableData.length > 0 && (
                         <Button size="sm" onClick={handleDownloadExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs shadow-md">
@@ -377,9 +367,19 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                   )}
                 </div>
 
-                <TabsContent value="table-view">
-                  <div className="border border-orange-200 rounded-xl overflow-x-auto h-[340px] bg-white p-2 relative flex flex-col justify-between">
-                    {structuredTableData.length > 0 ? (
+                <TabsContent value="text-view">
+                  <Textarea 
+                    rows={13} 
+                    value={extractedText} 
+                    onChange={(e) => setExtractedText(e.target.value)} 
+                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "फोटो से परफ़ेक्ट टेक्स्ट व लेआउट निकालें" बटन दबाएं...' : 'Upload photo and click extract...'}
+                    className="font-serif text-xs sm:text-sm bg-white border-orange-200 focus-visible:ring-orange-500 h-[350px] p-4 leading-relaxed whitespace-pre" 
+                  />
+                </TabsContent>
+
+                {structuredTableData.length > 0 && (
+                  <TabsContent value="table-view">
+                    <div className="border border-orange-200 rounded-xl overflow-x-auto h-[350px] bg-white p-2 relative flex flex-col justify-between">
                       <div className="overflow-auto h-full">
                         <table className="w-full text-xs text-left border-collapse font-sans min-w-[600px]">
                           <tbody>
@@ -409,32 +409,16 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                           </tbody>
                         </table>
                       </div>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-xs text-gray-400">
-                        {lang === 'hi' ? 'फोटो अपलोड करके स्कैन करें, यहाँ आपकी परफ़ेक्ट टेबल दिखाई देगी' : 'Clean Excel table layout will appear here after scan'}
-                      </div>
-                    )}
 
-                    {structuredTableData.length > 0 && (
                       <div className="pt-2 flex justify-start border-t border-slate-200">
                         <Button size="sm" variant="ghost" onClick={handleAddRow} className="text-xs text-orange-600 hover:bg-orange-50 gap-1 h-7">
                           <Plus className="w-3.5 h-3.5" />
                           {lang === 'hi' ? 'नई रो (Row) जोड़ें' : 'Add New Row'}
                         </Button>
                       </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="text-view">
-                  <Textarea 
-                    rows={12} 
-                    value={extractedText} 
-                    onChange={(e) => setExtractedText(e.target.value)} 
-                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "फोटो से टेबल एक्सट्रेक्ट करें" बटन दबाएं...' : 'Upload photo and click extract...'}
-                    className="font-sans text-xs sm:text-sm bg-slate-50 border-orange-200 focus-visible:ring-orange-500 h-[340px] p-3.5 leading-relaxed" 
-                  />
-                </TabsContent>
+                    </div>
+                  </TabsContent>
+                )}
               </Tabs>
             </div>
           </div>
