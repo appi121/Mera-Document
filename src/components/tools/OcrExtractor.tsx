@@ -23,7 +23,8 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
-  FileCheck2
+  FileCheck2,
+  RefreshCw
 } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 
@@ -41,7 +42,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
   const [statusText, setStatusText] = useState('');
   const [copied, setCopied] = useState(false);
 
-  // 100% Exact verified data from the user's photo
+  // Sample verified data from the board list photo
   const exactTop10Title = `कार्यालय प्राचार्य, सांदीपनि विद्यालय जनजातीय कार्य विभाग पाटी जिला बडवानी\nकक्षा 10 वीं बोर्ड टॉप टेन बालिकाओं की सूची वर्ष 2025-26`;
   
   const exactTop10Grid = [
@@ -59,12 +60,13 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
   ];
 
   const loadVerifiedTop10Data = () => {
+    setFile(null);
     setPreviewUrl('/uploads/top10_board_list_photo.jpeg');
     setStructuredTableData(exactTop10Grid);
 
     const fullText = exactTop10Title + '\n\n' + exactTop10Grid.map(row => row.join('\t')).join('\n');
     setExtractedText(fullText);
-    showSuccess(lang === 'hi' ? '100% सत्यापित बोर्ड टॉप 10 सूची लोड हो गई!' : 'Loaded 100% Verified Top 10 List!');
+    showSuccess(lang === 'hi' ? 'नमूना/सैंपल बोर्ड सूची लोड हो गई!' : 'Loaded sample board top 10 list!');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,6 +79,8 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       setStructuredTableData([]);
     } else {
       setPreviewUrl(null);
+      setExtractedText('');
+      setStructuredTableData([]);
     }
   };
 
@@ -86,13 +90,8 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       return;
     }
 
-    // Auto-detect user's uploaded photo or sample
-    if (
-      previewUrl?.includes('top10_board_list_photo') || 
-      file?.name.toLowerCase().includes('whatsapp image') || 
-      file?.name.toLowerCase().includes('top10') ||
-      file?.size === 87342
-    ) {
+    // Only load sample data if user hasn't uploaded a file AND previewUrl is explicitly the sample asset
+    if (!file && previewUrl?.includes('top10_board_list_photo')) {
       loadVerifiedTop10Data();
       return;
     }
@@ -101,7 +100,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     setStatusText(lang === 'hi' ? 'फोटो का कंट्रास्ट व रिज़ॉल्यूशन बढ़ाया जा रहा है...' : 'Enhancing image quality...');
 
     try {
-      const targetSource = previewUrl || (file ? URL.createObjectURL(file) : '');
+      const targetSource = file ? URL.createObjectURL(file) : previewUrl || '';
       
       const enhancedImageDataUrl = await preprocessImageForOcr(targetSource);
 
@@ -130,7 +129,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       if (result.formattedText.trim()) {
         setExtractedText(result.formattedText);
         setStructuredTableData(result.gridMatrix);
-        showSuccess(lang === 'hi' ? 'फोटो से परफ़ेक्ट टेबल और डाटा एक्सट्रेक्ट हो गया!' : 'Table and data extracted successfully!');
+        showSuccess(lang === 'hi' ? 'नई फोटो से टेबल और डाटा सफलतापूर्वक एक्सट्रेक्ट हो गया!' : 'Table and data extracted successfully!');
       } else {
         setExtractedText(
           lang === 'hi' 
@@ -183,7 +182,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 
   const handleDownloadWord = () => {
     if (!extractedText) return;
-    downloadWordDoc(`Clean_Document_${Date.now()}.doc`, extractedText, 'Board Top 10 List');
+    downloadWordDoc(`Document_${Date.now()}.doc`, extractedText, 'Document Text');
     showSuccess(lang === 'hi' ? 'MS Word (.doc) फ़ाइल डाउनलोड हुई!' : 'Word Document downloaded!');
   };
 
@@ -209,8 +208,6 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       return `<tr>${cells}</tr>`;
     }).join('');
 
-    const titleHeader = `<tr><td colspan="${nonColIndices.length}" style="font-weight:bold; font-size:14pt; text-align:center; padding:10px;">कार्यालय प्राचार्य, सांदीपनि विद्यालय जनजातीय कार्य विभाग पाटी जिला बडवानी<br/>कक्षा 10 वीं बोर्ड टॉप टेन बालिकाओं की सूची वर्ष 2025-26</td></tr>`;
-
     const excelDoc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
   <meta charset="utf-8">
@@ -219,7 +216,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     <x:ExcelWorkbook>
       <x:ExcelWorksheets>
         <x:ExcelWorksheet>
-          <x:Name>Top 10 List</x:Name>
+          <x:Name>Table Sheet</x:Name>
           <x:WorksheetOptions>
             <x:DisplayGridlines/>
           </x:WorksheetOptions>
@@ -235,15 +232,14 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 </head>
 <body>
   <table>
-    ${titleHeader}
     ${rowsHtml}
   </table>
 </body>
 </html>`;
 
     const blob = new Blob(['\ufeff' + excelDoc], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    downloadFile(blob, `Top10_Board_Balika_List_2025-26.xls`, 'application/vnd.ms-excel');
-    showSuccess(lang === 'hi' ? 'परफ़ेक्ट 100% बोर्ड सूची एक्सेल (.xls) डाउनलोड हुई!' : 'Clean Excel Table downloaded!');
+    downloadFile(blob, `Extracted_Table_${Date.now()}.xls`, 'application/vnd.ms-excel');
+    showSuccess(lang === 'hi' ? 'परफ़ेक्ट टेबल एक्सेल (.xls) डाउनलोड हुई!' : 'Excel Table downloaded!');
   };
 
   return (
@@ -273,7 +269,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
         </CardHeader>
 
         <CardContent className="p-6 space-y-6">
-          {/* Preset Verification Banner */}
+          {/* Sample Demo Banner */}
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center shrink-0 font-bold">
@@ -281,20 +277,21 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
               </div>
               <div>
                 <p className="font-bold text-gray-900 text-xs sm:text-sm">
-                  {lang === 'hi' ? 'आपकी अपलोड की गई फोटो का 100% सत्यापित शुद्ध डाटा तैयार है' : '100% Exact verified data from your uploaded photo is ready'}
+                  {lang === 'hi' ? 'अपनी नई फोटो अपलोड करें या नमूना डेमो देखें' : 'Upload your new photo or test sample demo'}
                 </p>
                 <p className="text-[11px] text-gray-600">
-                  {lang === 'hi' ? 'बोर्ड टॉप 10 बालिकाओं की सूची (सांदीपनि विद्यालय, पाटी - बडवानी)' : 'Board Top 10 List - Sandipani Vidyalaya Pati Badwani'}
+                  {lang === 'hi' ? 'किसी भी बिल, मार्कशीट या टेबल की फोटो से एक्सेल में डाटा निकालें' : 'Extract clean table data from photos into Excel'}
                 </p>
               </div>
             </div>
 
             <Button
               onClick={loadVerifiedTop10Data}
-              className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-4 py-2 rounded-xl shrink-0 gap-1.5 shadow"
+              variant="outline"
+              className="border-orange-300 text-orange-800 bg-white hover:bg-orange-100 text-xs font-bold px-3.5 py-2 rounded-xl shrink-0 gap-1.5 shadow-sm"
             >
-              <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-              {lang === 'hi' ? '100% असली डाटा लोड करें' : 'Load 100% Exact Data'}
+              <CheckCircle2 className="w-4 h-4 text-orange-600" />
+              {lang === 'hi' ? 'नमूना/सैंपल देखें' : 'View Sample Demo'}
             </Button>
           </div>
 
@@ -324,7 +321,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                       <Camera className="w-7 h-7" />
                     </div>
                     <p className="font-bold text-gray-800 text-sm mb-1">
-                      {lang === 'hi' ? 'टेबल या कागज़ की फोटो अपलोड करें' : 'Upload Printed Table Photo'}
+                      {lang === 'hi' ? 'नई फोटो अपलोड करें (क्लिक करें)' : 'Upload New Photo (Click here)'}
                     </p>
                     <p className="text-xs text-gray-500 max-w-xs">
                       {lang === 'hi' ? 'बिल, सारणी (Table), लिस्ट या फॉर्म की फोटो चुनें' : 'Upload photo of table sheet, bill, list or document'}
@@ -335,13 +332,13 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 
               <Button
                 onClick={handleExtract}
-                disabled={!file && !previewUrl}
+                disabled={(!file && !previewUrl) || loading}
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2.5 rounded-xl gap-2 shadow-sm"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {loading 
-                  ? (lang === 'hi' ? 'टेबल स्कैन हो रही है...' : 'Scanning Table...') 
-                  : (lang === 'hi' ? 'परफ़ेक्ट टेबल एक्सट्रेक्ट करें' : 'Extract Table & Data')}
+                  ? (lang === 'hi' ? 'फोटो स्कैन हो रही है...' : 'Scanning Photo...') 
+                  : (lang === 'hi' ? 'फोटो से टेबल एक्सट्रेक्ट करें' : 'Extract Table & Data')}
               </Button>
             </div>
 
@@ -414,7 +411,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                       </div>
                     ) : (
                       <div className="h-full flex items-center justify-center text-xs text-gray-400">
-                        {lang === 'hi' ? 'फोटो स्कैन करने के बाद यहाँ फोटो जैसी परफ़ेक्ट टेबल दिखाई देगी' : 'Clean Excel table layout will appear here after scan'}
+                        {lang === 'hi' ? 'फोटो अपलोड करके स्कैन करें, यहाँ आपकी परफ़ेक्ट टेबल दिखाई देगी' : 'Clean Excel table layout will appear here after scan'}
                       </div>
                     )}
 
@@ -434,7 +431,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                     rows={12} 
                     value={extractedText} 
                     onChange={(e) => setExtractedText(e.target.value)} 
-                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "परफ़ेक्ट टेबल एक्सट्रेक्ट करें" बटन दबाएं...' : 'Upload photo and click extract...'}
+                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "फोटो से टेबल एक्सट्रेक्ट करें" बटन दबाएं...' : 'Upload photo and click extract...'}
                     className="font-sans text-xs sm:text-sm bg-slate-50 border-orange-200 focus-visible:ring-orange-500 h-[340px] p-3.5 leading-relaxed" 
                   />
                 </TabsContent>
