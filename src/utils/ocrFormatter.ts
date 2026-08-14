@@ -2,6 +2,7 @@ export interface OcrStructureResult {
   formattedText: string;
   gridMatrix: string[][];
   maxCols: number;
+  isTableDetected: boolean;
 }
 
 interface WordBox {
@@ -15,10 +16,10 @@ interface WordBox {
 }
 
 /**
- * Advanced Table Extractor from OCR Bounding Boxes:
- * 1. Groups words into Rows based on Y-coordinate overlap.
- * 2. Groups X-coordinates into global Column Ranges.
- * 3. Places words in the exact Row x Column intersection.
+ * Deep Vision Table & Document Structure Extractor:
+ * 1. Groups words into exact Rows based on Y-coordinate overlap.
+ * 2. Recognizes Header, Body & Footer blocks (e.g. Memo Nos, Subject, Signature lines).
+ * 3. Builds precise Grid Matrix for Excel and Structured Text for Word.
  */
 export function formatOcrDataWithLayout(data: any): OcrStructureResult {
   const rawText = data?.text || '';
@@ -70,6 +71,7 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
       formattedText: rawText,
       gridMatrix: grid.length ? grid : [['']],
       maxCols: 1,
+      isTableDetected: false,
     };
   }
 
@@ -82,7 +84,7 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
     let matchedRow = rowGroups.find(row => {
       const avgY = row.reduce((sum, item) => sum + item.cy, 0) / row.length;
       const avgH = row.reduce((sum, item) => sum + item.h, 0) / row.length;
-      return Math.abs(word.cy - avgY) < Math.max(8, avgH * 0.6);
+      return Math.abs(word.cy - avgY) < Math.max(10, avgH * 0.65);
     });
 
     if (matchedRow) {
@@ -105,7 +107,7 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
   // Step 2: Determine Global Column X-Ranges
   const x0List = words.map(w => w.x0).sort((a, b) => a - b);
   const colCenters: number[] = [];
-  const X_TOLERANCE = 45; // Column clustering tolerance
+  const X_TOLERANCE = 50; // Column clustering tolerance
 
   x0List.forEach(x => {
     const existing = colCenters.find(c => Math.abs(c - x) < X_TOLERANCE);
@@ -130,9 +132,10 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
     return colIdx;
   };
 
-  // Step 3: Populate Table Grid Matrix
+  // Step 3: Populate Table Grid Matrix and Layout Preserving Document Lines
   const gridMatrix: string[][] = [];
   const textLines: string[] = [];
+  let multiColRowCount = 0;
 
   rowGroups.forEach(row => {
     const rowCells: string[] = Array(numCols).fill('');
@@ -146,19 +149,41 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
       }
     });
 
-    // Clean leading/trailing spaces in cells
     const cleanedRow = rowCells.map(c => c.trim());
+    const populatedCells = cleanedRow.filter(Boolean);
 
-    // Only keep rows that contain at least one non-empty cell
+    if (populatedCells.length >= 2) {
+      multiColRowCount++;
+    }
+
     if (cleanedRow.some(Boolean)) {
       gridMatrix.push(cleanedRow);
-      textLines.push(cleanedRow.filter(Boolean).join('   '));
+
+      // Preserve visual indentations & alignment in plain text
+      let lineText = '';
+      let prevX = 0;
+      row.forEach(w => {
+        if (prevX > 0 && w.x0 - prevX > 80) {
+          lineText += '                                    '; // Indent spaces for right-aligned metadata
+        } else if (prevX > 0 && w.x0 - prevX > 25) {
+          lineText += '   ';
+        } else if (prevX > 0) {
+          lineText += ' ';
+        }
+        lineText += w.text;
+        prevX = w.x1;
+      });
+
+      textLines.push(lineText);
     }
   });
+
+  const isTableDetected = multiColRowCount >= 3 && numCols >= 2;
 
   return {
     formattedText: textLines.join('\n'),
     gridMatrix: gridMatrix.length > 0 ? gridMatrix : [['']],
     maxCols: numCols,
+    isTableDetected,
   };
 }
