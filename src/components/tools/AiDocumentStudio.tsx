@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { showSuccess, showError } from '@/utils/toast';
 import { downloadFile, downloadWordDoc } from '@/utils/download';
 import { preprocessImageForOcr } from '@/utils/imagePreprocess';
@@ -14,9 +13,6 @@ import { createWorker } from 'tesseract.js';
 import { 
   ArrowLeft, 
   Sparkles, 
-  Bot, 
-  FileText, 
-  Table, 
   Copy, 
   Check, 
   Download, 
@@ -27,12 +23,8 @@ import {
   Wand2, 
   FileCheck2, 
   Languages, 
-  FileSpreadsheet as ExcelIcon,
-  HelpCircle,
-  UploadCloud,
-  RefreshCcw,
-  Plus,
-  Trash2
+  FileSpreadsheet as ExcelIcon, 
+  UploadCloud 
 } from 'lucide-react';
 
 interface AiDocumentStudioProps {
@@ -104,7 +96,6 @@ export const AiDocumentStudio: React.FC<AiDocumentStudioProps> = ({ lang, onBack
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
 
-    // Run AI OCR on upload
     setLoading(true);
     setStatusText(lang === 'hi' ? 'AI डीप विजन: दस्तावेज़ पढ़ा जा रहा है...' : 'AI Deep Vision: Scanning document...');
 
@@ -149,7 +140,6 @@ export const AiDocumentStudio: React.FC<AiDocumentStudioProps> = ({ lang, onBack
       const raw = inputText.trim();
 
       if (activeAction === 'fix-grammar') {
-        // AI Grammar & Spelling Auto-Correction Logic
         resultText = raw
           .replace(/जस/g, 'जिस')
           .replace(/ह/g, 'है')
@@ -158,14 +148,12 @@ export const AiDocumentStudio: React.FC<AiDocumentStudioProps> = ({ lang, onBack
           .replace(/भवदय/g, 'भवदीय')
           .replace(/  +/g, ' ');
 
-        // Add polish
         if (!resultText.includes('महोदय') && !resultText.includes('Subject')) {
           resultText = `विशुद्ध एवं संशोधित पाठ (AI Cleaned & Corrected Text):\n\n` + resultText;
         }
 
         showSuccess(lang === 'hi' ? '100% वर्तनी व व्याकरण त्रुटि सुधार पूर्ण!' : 'Grammar & spelling 100% corrected!');
       } else if (activeAction === 'formal-letter') {
-        // AI Govt Memo Formatter
         resultText = `कार्यालय मुख्य कार्यपालन अधिकारी / विभागाध्यक्ष
 क्रमांक: स्था/2025/प्र-1024                                       दिनांक: ${new Date().toLocaleDateString('hi-IN')}
 
@@ -190,7 +178,6 @@ ${raw.split('\n').slice(1).join('\n') || raw}
 
         showSuccess(lang === 'hi' ? 'शासकीय/कार्यालयी लेटर प्रारूप तैयार है!' : 'Formal memo formatted!');
       } else if (activeAction === 'table-extract') {
-        // AI Table Extractor
         const lines = raw.split('\n').filter(l => l.trim());
         gridResult = lines.map(line => {
           const cells = line.split(/[:\t,|]/).map(c => c.trim()).filter(Boolean);
@@ -214,7 +201,6 @@ ${raw.split('\n').slice(1).join('\n') || raw}
         resultText = gridResult.map(r => r.join(' | ')).join('\n');
         showSuccess(lang === 'hi' ? 'एक्सेल टेबल ग्रिड तैयार है!' : 'Excel table grid extracted!');
       } else if (activeAction === 'summarize') {
-        // AI Summary & Key Point Extractor
         const wordCount = raw.split(/\s+/).length;
         resultText = `📊 AI दस्तावेज़ सारांश व मुख्य बिंदु (Document Key Summary)
 
@@ -229,13 +215,10 @@ ${raw.split('\n').slice(1).join('\n') || raw}
 
         showSuccess(lang === 'hi' ? 'दस्तावेज़ का सार निकल गया!' : 'Key summary generated!');
       } else if (activeAction === 'translate-official') {
-        // Official Translation
         if (/[a-zA-Z]/.test(raw)) {
-          // English to Hindi
           resultText = `अनुवादित सरकारी/कानूनी पाठ (English ➔ Hindi):\n\n` +
             `उपरोक्त विषय के संदर्भ में सूचित किया जाता है कि प्रस्तुत आवेदन पत्र का परीक्षण कर लिया गया है। दी गई सभी जानकारियाँ सही पाई गईं। तदनुसार अग्रिम कार्यवाही हेतु प्रेषित है।`;
         } else {
-          // Hindi to English
           resultText = `Official Translated Text (Hindi ➔ English):\n\n` +
             `In reference to the above subject, it is hereby informed that the submitted document has been duly verified and found in order. Forwarded for further necessary action.`;
         }
