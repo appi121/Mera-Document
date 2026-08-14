@@ -1,356 +1,15 @@
 import React, { useState } from 'react';
-import { Language, ToolItem } from '@/types/document';
-import { Card } from '@/components/ui/card';
+import { Language } from '@/types/document';
 import { Badge } from '@/components/ui/badge';
 import { AdBanner } from '@/components/AdBanner';
-import { Button } from '@/components/ui/button';
-import { 
-  FileText, 
-  UserCheck, 
-  Globe, 
-  PenTool, 
-  Building2, 
-  Camera, 
-  FileSignature, 
-  CopyCheck, 
-  Table,
-  FileSpreadsheet,
-  Presentation,
-  FileImage,
-  Layers,
-  Scissors,
-  Minimize2,
-  Image as ImageIcon,
-  CreditCard,
-  Grid,
-  FileCheck2,
-  Clock,
-  ShieldCheck,
-  RefreshCw,
-  Keyboard,
-  Receipt,
-  Brain,
-  X
-} from 'lucide-react';
+import { ToolCard } from '@/components/ToolCard';
+import { toolsData } from '@/data/toolsData';
 
 interface ToolGridProps {
   lang: Language;
   searchQuery: string;
   onSelectTool: (toolId: string) => void;
 }
-
-export const toolsData: ToolItem[] = [
-  // #1 Featured Universal AI Tool
-  {
-    id: 'ai-studio',
-    titleHi: '🤖 AI डॉक्यूमेंट स्टूडियो & सह-पायलट',
-    titleEn: '🤖 Universal AI Document Studio & Copilot',
-    descHi: 'ChatGPT/DeepSeek पावर: किसी भी डॉक्यूमेंट का 1-क्लिक में त्रुटि सुधार, शासकीय फॉर्मेटिंग व टेबल एक्सट्रेक्शन',
-    descEn: 'ChatGPT & DeepSeek style AI: Instant grammar fix, official formatting, table grid & translation',
-    icon: 'ai-studio',
-    category: 'ai',
-    badgeHi: 'ChatGPT & DeepSeek AI',
-    badgeEn: 'ChatGPT & DeepSeek AI',
-    keywords: 'ai studio copilot chatgpt deepseek gemini fix grammar spelling correction formal letter memo summary translate photo text prompt'
-  },
-  // 1st to 5th Tools
-  {
-    id: 'pdf-to-word',
-    titleHi: '📄 PDF to Word (स्कैन OCR स्पेशल)',
-    titleEn: '📄 PDF to Word Converter (AI OCR)',
-    descHi: 'PDF एवं स्कैन कागज़ात को एडिटेबल Word (DOCX) फ़ाइल में बदलें',
-    descEn: 'Convert PDF & scanned paper photos into editable Word documents',
-    icon: 'pdf-to-word',
-    category: 'popular',
-    badgeHi: 'टॉप 1 टूल',
-    badgeEn: 'Top #1 Tool',
-    keywords: 'pdf to word convert doc docx scanner ocr photo to word text edit'
-  },
-  {
-    id: 'word-to-pdf',
-    titleHi: '📝 Word to PDF',
-    titleEn: '📝 Word to PDF Converter',
-    descHi: 'Word (DOC/DOCX) फ़ाइल को तुरंत सुरक्षित PDF में बदलें',
-    descEn: 'Convert Word document to secure high quality PDF',
-    icon: 'word-to-pdf',
-    category: 'pdf',
-    badgeHi: '2nd टूल',
-    badgeEn: 'Top #2 Tool',
-    keywords: 'word to pdf doc to pdf convert docx file'
-  },
-  {
-    id: 'excel-to-pdf',
-    titleHi: '📊 Excel to PDF',
-    titleEn: '📊 Excel to PDF Converter',
-    descHi: 'Excel (XLS/XLSX) शीट्स को PDF फॉर्मेट में कनवर्ट करें',
-    descEn: 'Convert Excel spreadsheets into clean PDF documents',
-    icon: 'excel-to-pdf',
-    category: 'pdf',
-    badgeHi: '3rd टूल',
-    badgeEn: 'Top #3 Tool',
-    keywords: 'excel to pdf xls xlsx sheet convert table'
-  },
-  {
-    id: 'ppt-to-pdf',
-    titleHi: '🖥️ PPT to PDF',
-    titleEn: '🖥️ PPT to PDF Converter',
-    descHi: 'PowerPoint प्रस्तुति (PPT/PPTX) को आसानी से PDF में बदलें',
-    descEn: 'Convert PowerPoint slides to PDF format easily',
-    icon: 'ppt-to-pdf',
-    category: 'pdf',
-    badgeHi: '4th टूल',
-    badgeEn: 'Top #4 Tool',
-    keywords: 'ppt to pdf powerpoint slides convert pptx'
-  },
-  {
-    id: 'excel',
-    titleHi: '📊 एक्सेल AI असिस्टेंट (Excel Formula)',
-    titleEn: '📊 Excel AI Assistant & Formula Helper',
-    descHi: 'एक्सेल फ़ॉर्मूला (VLOOKUP, SUM, GST) और डेटा शीट में सहायता पाएं',
-    descEn: 'Get instant Excel formulas & data management helper',
-    icon: 'excel',
-    category: 'utilities',
-    badgeHi: '5th टूल',
-    badgeEn: 'Top #5 Tool',
-    keywords: 'excel formula vlookup sum gst calculation helper assistant sheet'
-  },
-
-  // PDF to Excel
-  {
-    id: 'pdf-to-excel',
-    titleHi: '📊 PDF to Excel (AI Table Extractor)',
-    titleEn: '📊 PDF to Excel Converter (AI Table)',
-    descHi: 'PDF एवं स्कैन टेबल्स से डाटा निकालकर तुरंत Excel (.xls) शीट में बदलें',
-    descEn: 'Extract tables and data from PDF into editable Excel sheets',
-    icon: 'excel-to-pdf',
-    category: 'pdf',
-    badgeHi: 'नया टूल',
-    badgeEn: 'New Tool',
-    keywords: 'pdf to excel table extractor xls xlsx grid matrix converter'
-  },
-
-  // अन्य मुख्य टूल्स
-  {
-    id: 'photo-resizer',
-    titleHi: '🖼️ फोटो व सिग्नेचर रिसाइज़र',
-    titleEn: '🖼️ Govt Photo & Signature Resizer',
-    descHi: 'SSC, बैंक व रेलवे फॉर्म के लिए फोटो/दस्तखत 20KB या 50KB सेट करें',
-    descEn: 'Resize photos & signatures under 20KB/50KB for govt job forms',
-    icon: 'photo-resizer',
-    category: 'popular',
-    badgeHi: 'सरकारी फॉर्म स्पेशल',
-    badgeEn: 'Govt Form Special',
-    keywords: 'photo resizer signature resize 20kb 50kb compress image ssc railway police bank form'
-  },
-  {
-    id: 'ocr',
-    titleHi: '📷 OCR (फोटो से टेक्स्ट निकालें)',
-    titleEn: '📷 OCR Photo Text Extractor',
-    descHi: 'कागज़/फोटो से हिंदी व इंग्लिश टेक्स्ट बाहर निकालें व कॉपी करें',
-    descEn: 'Extract editable Hindi & English text from photos & paper images',
-    icon: 'ocr',
-    category: 'utilities',
-    badgeHi: 'AI OCR',
-    badgeEn: 'AI OCR',
-    keywords: 'ocr photo to text image text extractor hindi english reader scanner paper'
-  },
-  {
-    id: 'resume',
-    titleHi: '🤖 AI रिज्यूमे व बायोडाटा बिल्डर',
-    titleEn: '🤖 AI Resume & Biodata Builder',
-    descHi: '1 मिनट में प्रोफेशनल बायोडाटा/रिज्यूमे बनाएं और PDF डाउनलोड करें',
-    descEn: 'Build professional Indian resume in 1 minute with instant PDF download',
-    icon: 'resume',
-    category: 'ai',
-    badgeHi: 'AI पावर',
-    badgeEn: 'AI Powered',
-    keywords: 'resume builder biodata cv maker job create pdf resume'
-  },
-  {
-    id: 'translate',
-    titleHi: '🌐 हिंदी ↔ इंग्लिश ट्रांसलेटर',
-    titleEn: '🌐 Hindi ↔ English AI Translator',
-    descHi: 'सरकारी व ऑफिशियल पत्रों का तुरंत सटीक अनुवाद करें',
-    descEn: 'Instant translation for official, legal & govt work',
-    icon: 'translate',
-    category: 'ai',
-    badgeHi: 'अनिवार्य',
-    badgeEn: 'Essential',
-    keywords: 'translate translator hindi english translation anuvad bhasha'
-  },
-  {
-    id: 'letter',
-    titleHi: '📝 AI आवेदन पत्र (Letter Writer)',
-    titleEn: '📝 AI Letter & Application Writer',
-    descHi: 'छुट्टी, बैंक और सरकारी दफ्तर के लिए ऑटो-लेटर बनाएं',
-    descEn: 'Auto-generate leave, bank & official complaint applications',
-    icon: 'letter',
-    category: 'ai',
-    keywords: 'letter writer application leave request bank application pradhanacharya aavedan patra'
-  },
-  {
-    id: 'govt',
-    titleHi: '📑 सरकारी फॉर्म असिस्टेंट',
-    titleEn: '📑 Govt Form Guide & Assistant',
-    descHi: 'आय, जाति, निवास और पैन कार्ड फॉर्म की संपूर्ण गाइड व लिस्ट',
-    descEn: 'Complete guide & document checklist for Indian Govt Forms',
-    icon: 'govt',
-    category: 'popular',
-    badgeHi: 'गाइड',
-    badgeEn: 'Guide',
-    keywords: 'govt form income certificate caste certificate pan card checklist documents'
-  },
-  {
-    id: 'signature',
-    titleHi: '✍️ डिजिटल सिग्नेचर मेकर',
-    titleEn: '✍️ Digital Signature Creator',
-    descHi: 'टाइप या हाथ से ड्रा करके पारदर्शी (Transparent PNG) दस्तखत बनाएं',
-    descEn: 'Create transparent PNG signatures by typing or drawing',
-    icon: 'signature',
-    category: 'utilities',
-    keywords: 'signature maker digital sign draw signature transparent png hastakshar'
-  },
-  {
-    id: 'passport-sheet',
-    titleHi: '🖨️ पासपोर्ट फोटो प्रिंट शीट मेकर',
-    titleEn: '🖨️ Passport Photo Sheet Maker',
-    descHi: '1 फोटो से 4x6 पर 8 फोटो या A4 पर 30 फोटो की रेडी प्रिंट शीट बनाएं',
-    descEn: 'Generate printable 8-photo (4x6) or 30-photo (A4) sheets instantly',
-    icon: 'passport-sheet',
-    category: 'popular',
-    badgeHi: 'मोस्ट वांटेड',
-    badgeEn: 'Most Popular',
-    keywords: 'passport photo sheet printable 4x6 a4 copies 8 photos 30 photos print'
-  },
-  {
-    id: 'id-joiner',
-    titleHi: '🪪 आधार/ID CARD फ्रंट-बैक जोडर',
-    titleEn: '🪪 ID Card Front & Back Joiner',
-    descHi: 'आधार, पैन व वोटर ID कार्ड के आगे-पीछे का भाग 1 पेज में जोड़ें',
-    descEn: 'Combine Front and Back of Aadhaar, PAN or Voter ID onto 1 page',
-    icon: 'id-joiner',
-    category: 'popular',
-    badgeHi: 'बहुत उपयोगी',
-    badgeEn: 'Must Have',
-    keywords: 'aadhaar joiner id card join front back side combine one page printable'
-  },
-  {
-    id: 'age-calculator',
-    titleHi: '🎂 सरकारी फॉर्म आयु कैलकुलेटर',
-    titleEn: '🎂 Govt Form Age Calculator',
-    descHi: 'कट-ऑफ तारीख तक अपनी सटीक उम्र (वर्ष, महीने, दिन) निकालें',
-    descEn: 'Calculate exact age in Years, Months, Days on job cut-off date',
-    icon: 'age-calculator',
-    category: 'popular',
-    keywords: 'age calculator dob date of birth cutoff age calculate year month day'
-  },
-  {
-    id: 'image-converter',
-    titleHi: '🔄 इमेज कनवर्टर (JPG, PNG, WEBP)',
-    titleEn: '🔄 Image Format & Target KB Converter',
-    descHi: 'WEBP/PNG फोटो को JPG में बदलें और मनचाहे KB में सेट करें',
-    descEn: 'Convert WEBP/PNG to JPG & squeeze image to exact KB size',
-    icon: 'image-converter',
-    category: 'popular',
-    keywords: 'image converter webp to jpg png to jpg compress target kb squeeze photo'
-  },
-  {
-    id: 'watermark',
-    titleHi: '🛡️ डॉक्यूमेंट सुरक्षा वाटरमार्क',
-    titleEn: '🛡️ Document Security Watermark',
-    descHi: 'आधार व पैन कार्ड पर "ONLY FOR KYC" वाटरमार्क लगाकर फ्रॉड रोकें',
-    descEn: 'Add protective "ONLY FOR BANK KYC" watermark on ID cards',
-    icon: 'watermark',
-    category: 'popular',
-    badgeHi: 'सुरक्षा स्पेशल',
-    badgeEn: 'Anti-Fraud',
-    keywords: 'watermark document security kyc protection anti fraud aadhaar safe stamp'
-  },
-  {
-    id: 'affidavit',
-    titleHi: '📜 शपथ पत्र व एफ़िडेविट मेकर',
-    titleEn: '📜 AI Affidavit Generator',
-    descHi: 'गैप ईयर, नाम सुधार व आय स्व-घोषणा पत्र लीगल ड्राफ्ट तैयार करें',
-    descEn: 'Generate affidavits for Gap Year, Name Mismatch & Declarations',
-    icon: 'affidavit',
-    category: 'utilities',
-    badgeHi: 'लीगल',
-    badgeEn: 'Legal Draft',
-    keywords: 'affidavit generator shapath patra gap year name correction income declaration legal draft'
-  },
-  {
-    id: 'typing-counter',
-    titleHi: '⌨️ वर्ड काउंटर व टाइपिंग स्पीड टेस्ट',
-    titleEn: '⌨️ Word Counter & WPM Typing Test',
-    descHi: 'अक्षर व शब्द गिनें तथा परीक्षा हेतु WPM टाइपिंग स्पीड टेस्ट दें',
-    descEn: 'Count words & characters, measure exam WPM typing speed',
-    icon: 'typing-counter',
-    category: 'utilities',
-    keywords: 'word counter character count typing speed test wpm timer passage practice'
-  },
-  {
-    id: 'gst-calculator',
-    titleHi: '🧾 GST बिल कैलकुलेटर व रसीद',
-    titleEn: '🧾 GST Bill Calculator & Receipt',
-    descHi: '5%, 12%, 18%, 28% GST बिल जोड़ें व ग्राहक हेतु व्हाट्सएप रसीद बनाएं',
-    descEn: 'Calculate GST bill with CGST/SGST breakdown & WhatsApp receipt',
-    icon: 'gst-calculator',
-    category: 'utilities',
-    badgeHi: 'दुकानदार स्पेशल',
-    badgeEn: 'Bill & Receipt',
-    keywords: 'gst bill calculator cgst sgst receipt whatsapp bill customer shopkeeper'
-  },
-  {
-    id: 'img-to-pdf',
-    titleHi: '🖼️ Image to PDF',
-    titleEn: '🖼️ Image to PDF Converter',
-    descHi: 'JPG, PNG फोटो से तुरंत 1 क्लिक में PDF बनाएं',
-    descEn: 'Convert JPG, PNG photos into single PDF file',
-    icon: 'img-to-pdf',
-    category: 'pdf',
-    keywords: 'image to pdf jpg to pdf png to pdf photo to pdf'
-  },
-  {
-    id: 'merge-pdf',
-    titleHi: '📚 Merge PDF',
-    titleEn: '📚 Merge PDF Files',
-    descHi: 'कई PDF फ़ाइलों को जोड़कर एक नया PDF बनाएं',
-    descEn: 'Combine multiple PDF files into one single PDF',
-    icon: 'merge-pdf',
-    category: 'pdf',
-    keywords: 'merge pdf combine pdf join pdf multiple pdf'
-  },
-  {
-    id: 'compress-pdf',
-    titleHi: '🗜️ Compress PDF',
-    titleEn: '🗜️ Compress PDF Size',
-    descHi: 'PDF का साइज (MB से KB) क्वालिटी बिना घटाए कम करें',
-    descEn: 'Reduce PDF file size without losing quality',
-    icon: 'compress-pdf',
-    category: 'pdf',
-    keywords: 'compress pdf reduce pdf size mb to kb small pdf'
-  },
-  {
-    id: 'split-pdf',
-    titleHi: '✂️ Split PDF',
-    titleEn: '✂️ Split PDF File',
-    descHi: 'बड़ी PDF के पन्नों को अलग-अलग टुकड़ों में बांटें',
-    descEn: 'Extract or split pages from large PDF document',
-    icon: 'split-pdf',
-    category: 'pdf',
-    keywords: 'split pdf cut pdf extract pages separate pdf'
-  },
-  {
-    id: 'templates',
-    titleHi: '📋 डॉक्यूमेंट टेम्पलेट्स',
-    titleEn: '📋 Document Templates',
-    descHi: 'किरायानामा, रसीद, सैलेरी स्लिप के रेडीमेड फॉर्मेट्स',
-    descEn: 'Ready formats for rent agreement, receipts, salary slips',
-    icon: 'templates',
-    category: 'popular',
-    keywords: 'document templates rent agreement payment receipt salary slip experience letter'
-  },
-];
 
 export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectTool }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -367,7 +26,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
     }
 
     // Deep Search Matching across title, description, badges, id and keywords
-    const matchesSearch = (
+    return (
       t.titleHi.toLowerCase().includes(cleanQuery) ||
       t.titleEn.toLowerCase().includes(cleanQuery) ||
       t.descHi.toLowerCase().includes(cleanQuery) ||
@@ -377,8 +36,6 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
       (t.badgeEn && t.badgeEn.toLowerCase().includes(cleanQuery)) ||
       (t.keywords && t.keywords.toLowerCase().includes(cleanQuery))
     );
-
-    return matchesSearch;
   });
 
   return (
@@ -454,70 +111,15 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTools.map((tool) => (
-              <Card
+              <ToolCard
                 key={tool.id}
-                onClick={() => onSelectTool(tool.id)}
-                className={`group cursor-pointer transition-all duration-300 hover:shadow-xl rounded-2xl p-6 relative flex flex-col justify-between ${
-                  tool.id === 'ai-studio'
-                    ? 'border-2 border-orange-500 bg-gradient-to-br from-orange-50/60 via-amber-50/30 to-white shadow-md hover:border-orange-600'
-                    : 'border-orange-100/80 hover:border-orange-400 bg-white hover:bg-gradient-to-br hover:from-white hover:to-orange-50/30'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl group-hover:scale-110 transition-transform shadow-sm">
-                      {tool.icon === 'ai-studio' && <Brain className="w-6 h-6 text-orange-600" />}
-                      {tool.icon === 'photo-resizer' && <ImageIcon className="w-6 h-6" />}
-                      {tool.icon === 'image-converter' && <RefreshCw className="w-6 h-6" />}
-                      {tool.icon === 'gst-calculator' && <Receipt className="w-6 h-6" />}
-                      {tool.icon === 'typing-counter' && <Keyboard className="w-6 h-6" />}
-                      {tool.icon === 'age-calculator' && <Clock className="w-6 h-6" />}
-                      {tool.icon === 'watermark' && <ShieldCheck className="w-6 h-6" />}
-                      {tool.icon === 'passport-sheet' && <Grid className="w-6 h-6" />}
-                      {tool.icon === 'id-joiner' && <CreditCard className="w-6 h-6" />}
-                      {tool.icon === 'affidavit' && <FileCheck2 className="w-6 h-6" />}
-                      {tool.icon === 'pdf-to-word' && <FileText className="w-6 h-6" />}
-                      {tool.icon === 'word-to-pdf' && <FileText className="w-6 h-6" />}
-                      {tool.icon === 'excel-to-pdf' && <FileSpreadsheet className="w-6 h-6" />}
-                      {tool.icon === 'ppt-to-pdf' && <Presentation className="w-6 h-6" />}
-                      {tool.icon === 'img-to-pdf' && <FileImage className="w-6 h-6" />}
-                      {tool.icon === 'merge-pdf' && <Layers className="w-6 h-6" />}
-                      {tool.icon === 'split-pdf' && <Scissors className="w-6 h-6" />}
-                      {tool.icon === 'compress-pdf' && <Minimize2 className="w-6 h-6" />}
-                      {tool.icon === 'ocr' && <Camera className="w-6 h-6" />}
-                      {tool.icon === 'resume' && <UserCheck className="w-6 h-6" />}
-                      {tool.icon === 'translate' && <Globe className="w-6 h-6" />}
-                      {tool.icon === 'letter' && <PenTool className="w-6 h-6" />}
-                      {tool.icon === 'govt' && <Building2 className="w-6 h-6" />}
-                      {tool.icon === 'signature' && <FileSignature className="w-6 h-6" />}
-                      {tool.icon === 'templates' && <CopyCheck className="w-6 h-6" />}
-                      {tool.icon === 'excel' && <Table className="w-6 h-6" />}
-                    </div>
-
-                    {(tool.badgeHi || tool.badgeEn) && (
-                      <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200 text-xs font-semibold px-2.5 py-0.5">
-                        {lang === 'hi' ? tool.badgeHi : tool.badgeEn}
-                      </Badge>
-                    )}
-                  </div>
-
-                  <h3 className="font-bold text-gray-900 text-lg mb-2 group-hover:text-orange-600 transition-colors">
-                    {lang === 'hi' ? tool.titleHi : tool.titleEn}
-                  </h3>
-
-                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                    {lang === 'hi' ? tool.descHi : tool.descEn}
-                  </p>
-                </div>
-
-                <div className="pt-2 flex items-center text-xs font-bold text-orange-600 group-hover:translate-x-1 transition-transform">
-                  <span>{lang === 'hi' ? 'उपयोग करें ➔' : 'Use Tool ➔'}</span>
-                </div>
-              </Card>
+                tool={tool}
+                lang={lang}
+                onSelectTool={onSelectTool}
+              />
             ))}
           </div>
 
-          {/* Strategic AdSense Placement Slot */}
           <AdBanner className="mt-10" />
         </>
       )}
