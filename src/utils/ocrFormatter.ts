@@ -16,20 +16,38 @@ interface WordBox {
 }
 
 /**
+ * Hindi / Govt official spelling and layout corrector
+ */
+export function cleanDevanagariOcrText(raw: string): string {
+  if (!raw) return '';
+  return raw
+    .replace(/भागसर/g, 'भागसुर')
+    .replace(/चौकी/g, 'चौकी')
+    .replace(/कायलय/g, 'कार्यालय')
+    .replace(/दतावेज़/g, 'दस्तावेज़')
+    .replace(/क्रमाक/g, 'क्रमांक')
+    .replace(/महोद्य/g, 'महोदय')
+    .replace(/हस्ताक्षर/g, 'हस्ताक्षर')
+    .replace(/अनुक्रमाक/g, 'अनुक्रमांक')
+    .replace(/  +/g, ' ');
+}
+
+/**
  * Deep Vision Table & Document Structure Extractor:
  * 1. Groups words into exact Rows based on Y-coordinate overlap.
  * 2. Recognizes Header, Body & Footer blocks (e.g. Memo Nos, Subject, Signature lines).
  * 3. Builds precise Grid Matrix for Excel and Structured Text for Word.
  */
 export function formatOcrDataWithLayout(data: any): OcrStructureResult {
-  const rawText = data?.text || '';
+  const rawText = cleanDevanagariOcrText(data?.text || '');
 
   // Extract all valid words with bounding boxes
   const words: WordBox[] = [];
 
   if (data && data.words && data.words.length > 0) {
     data.words.forEach((w: any) => {
-      const txt = (w.text || '').replace(/^[|\[\]{}\\]+$/g, '').trim();
+      let txt = (w.text || '').replace(/^[|\[\]{}\\]+$/g, '').trim();
+      txt = cleanDevanagariOcrText(txt);
       if (txt) {
         words.push({
           text: txt,
@@ -46,7 +64,8 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
     data.lines.forEach((line: any) => {
       if (line.words) {
         line.words.forEach((w: any) => {
-          const txt = (w.text || '').replace(/^[|\[\]{}\\]+$/g, '').trim();
+          let txt = (w.text || '').replace(/^[|\[\]{}\\]+$/g, '').trim();
+          txt = cleanDevanagariOcrText(txt);
           if (txt) {
             words.push({
               text: txt,
@@ -84,7 +103,7 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
     let matchedRow = rowGroups.find(row => {
       const avgY = row.reduce((sum, item) => sum + item.cy, 0) / row.length;
       const avgH = row.reduce((sum, item) => sum + item.h, 0) / row.length;
-      return Math.abs(word.cy - avgY) < Math.max(10, avgH * 0.65);
+      return Math.abs(word.cy - avgY) < Math.max(12, avgH * 0.7);
     });
 
     if (matchedRow) {
@@ -107,7 +126,7 @@ export function formatOcrDataWithLayout(data: any): OcrStructureResult {
   // Step 2: Determine Global Column X-Ranges
   const x0List = words.map(w => w.x0).sort((a, b) => a - b);
   const colCenters: number[] = [];
-  const X_TOLERANCE = 50; // Column clustering tolerance
+  const X_TOLERANCE = 45; // Column clustering tolerance
 
   x0List.forEach(x => {
     const existing = colCenters.find(c => Math.abs(c - x) < X_TOLERANCE);

@@ -14,9 +14,9 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
         return;
       }
 
-      // Calculate optimal resolution (~2200px max dimension for deep OCR clarity)
+      // Upscale resolution to minimum 2200px width/height for maximum Devanagari OCR precision
       const maxDim = Math.max(img.width, img.height);
-      const scale = maxDim < 1200 ? 2.0 : (maxDim > 2400 ? 2000 / maxDim : 1.3);
+      const scale = maxDim < 1400 ? 2.2 : (maxDim > 2800 ? 2400 / maxDim : 1.5);
       
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
@@ -28,19 +28,21 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
 
-      // Deep Luma & Contrast Enhancement protecting Devanagari Vowel Signs & Table Grid Lines
+      // Deep Luma, Noise Suppression & Dynamic Thresholding for scanned Govt & Police memos
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
         const gray = 0.299 * r + 0.587 * g + 0.114 * b;
 
-        // Mild adaptive contrast curve to prevent burning out top-lines (Shirorekha) & matras
+        // Sharpen characters while preventing noise amplification on scanned paper
         let color = gray;
-        if (gray < 210) {
-          color = gray * 0.88; // Darken text ink
+        if (gray < 200) {
+          // Text ink reinforcement (darken text characters)
+          color = Math.max(0, gray * 0.78);
         } else {
-          color = Math.min(255, gray * 1.08); // Clean background paper noise
+          // Background clean (whiten aged paper yellowish tint)
+          color = 255;
         }
 
         data[i] = color;

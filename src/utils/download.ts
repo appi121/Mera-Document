@@ -1,6 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { createWorker } from 'tesseract.js';
 import { formatOcrDataWithLayout } from './ocrFormatter';
+import { preprocessImageForOcr } from './imagePreprocess';
 import { generatePdfFromContent } from './wordToPdf';
 
 // Set worker source for PDF.js using cdnjs
@@ -37,17 +38,17 @@ export const downloadWordDoc = (filename: string, textContent: string, title: st
         return '<p style="margin: 0; line-height: 1.0; font-size: 8pt;">&nbsp;</p>';
       }
 
-      // Check if it's a table row
+      // Check if it's a table row (contains multiple column delimiters)
       if (line.includes('|') || line.includes('\t')) {
-        const cells = line.split(/[\t|]/).map(c => `<td style="border:1px solid #cbd5e1; padding:6px 10px; font-family:'Calibri', 'Mangal', 'Segoe UI', sans-serif; font-size: 11pt;">${c.trim()}</td>`).join('');
-        return `<table style="border-collapse:collapse; width:100%; margin: 8pt 0;"><tr>${cells}</tr></table>`;
+        const cells = line.split(/[\t|]/).map(c => `<td style="border:1px solid #94a3b8; padding:8px 12px; font-family:'Mangal', 'Noto Sans Devanagari', 'Calibri', sans-serif; font-size: 11pt; vertical-align: top;">${c.trim()}</td>`).join('');
+        return `<table style="border-collapse:collapse; width:100%; margin: 10pt 0; border: 1px solid #94a3b8;"><tr>${cells}</tr></table>`;
       }
 
       // Detect center alignment in Indian documents (Headings, Slogans, Quotes, Titles)
       const leadingSpaces = line.length - line.trimStart().length;
       const isCenter = (
         leadingSpaces >= 10 ||
-        /^(स्लोगन|नारे|स्वतंत्रता दिवस|कार्यालय|शासकीय|प्रमाण पत्र|शपथ पत्र|अनुसूची|RESUME|BIODATA|CURRICULUM|EXPERIENCE|SALARY|RENT|AFFIDAVIT|DECLARATION|INDEPENDENCE DAY)/i.test(lineTrimmed) ||
+        /^(स्लोगन|नारे|स्वतंत्रता दिवस|कार्यालय|शासकीय|प्रमाण पत्र|शपथ पत्र|अनुसूची|रिपोर्ट|चौकी|थाना|RESUME|BIODATA|CURRICULUM|EXPERIENCE|SALARY|RENT|AFFIDAVIT|DECLARATION)/i.test(lineTrimmed) ||
         (lineTrimmed.startsWith('"') && lineTrimmed.endsWith('"')) ||
         (lineTrimmed.startsWith('“') && lineTrimmed.endsWith('”')) ||
         lineTrimmed.startsWith('---') ||
@@ -60,7 +61,7 @@ export const downloadWordDoc = (filename: string, textContent: string, title: st
       // Detect Right-aligned metadata (dates, signatures)
       const isRightAligned = (
         leadingSpaces >= 30 ||
-        /^(हस्ताक्षर|भवदीय|दिनांक:|Date:|स्थान:|Place:|प्राचार्य|अधीक्षक|शाखा प्रभारी)/i.test(lineTrimmed)
+        /^(हस्ताक्षर|भवदीय|दिनांक:|Date:|स्थान:|Place:|प्राचार्य|अधीक्षक|शाखा प्रभारी|थाना प्रभारी|चौकी प्रभारी)/i.test(lineTrimmed)
       );
 
       let textAlign = 'left';
@@ -79,7 +80,7 @@ export const downloadWordDoc = (filename: string, textContent: string, title: st
         fontWeight = 'normal';
       }
 
-      return `<p style="margin: 0 0 6pt 0; line-height: 1.5; font-family:'Mangal', 'Noto Sans Devanagari', 'Calibri', 'Segoe UI', Arial, sans-serif; font-size:${fontSize}; text-align:${textAlign}; font-weight:${fontWeight}; color:${color}; word-break: break-word;">${lineTrimmed}</p>`;
+      return `<p style="margin: 0 0 6pt 0; line-height: 1.55; font-family:'Mangal', 'Noto Sans Devanagari', 'Calibri', 'Segoe UI', Arial, sans-serif; font-size:${fontSize}; text-align:${textAlign}; font-weight:${fontWeight}; color:${color}; word-break: break-word;">${lineTrimmed}</p>`;
     })
     .join('');
 
@@ -131,16 +132,18 @@ export const generateSamplePdfBlob = (title: string, textContent: string): Blob 
 };
 
 /**
- * Renders a PDF page onto an offscreen HTML5 Canvas to get an image data URL
+ * Renders a PDF page onto an offscreen HTML5 Canvas at 2.5x resolution for deep neural OCR
  */
 const renderPdfPageToCanvas = async (pdfPage: any): Promise<string> => {
-  const viewport = pdfPage.getViewport({ scale: 2.0 });
+  const viewport = pdfPage.getViewport({ scale: 2.5 });
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   canvas.height = viewport.height;
   canvas.width = viewport.width;
 
   if (context) {
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
     await pdfPage.render({ canvasContext: context, viewport }).promise;
     return canvas.toDataURL('image/png');
   }
@@ -156,9 +159,9 @@ interface PdfTextItem {
 }
 
 /**
- * Advanced Spatial PDF Text Extractor:
- * Reconstructs precise lines and visual paragraphs by grouping words using their actual Y and X positions.
- * Guarantees that poetry, slogans, numbered lists, and letter structures don't get joined together or garbled.
+ * Deep Vision PDF Text & Scanned Table Extractor:
+ * If the PDF is pure vector text -> extracts precise spatial coordinates.
+ * If the PDF is a scanned document (like Bhagsur Police / Govt records) -> uses neural OCR with Devanagari preprocessing.
  */
 export const extractPdfContentAccurate = async (
   file: File, 
@@ -170,6 +173,7 @@ export const extractPdfContentAccurate = async (
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const pageOutputs: string[] = [];
+    let isScannedPdf = false;
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       if (onProgress) onProgress(`पन्ना ${pageNum} / ${pdf.numPages} का लेआउट पढ़ा जा रहा है...`);
@@ -183,7 +187,6 @@ export const extractPdfContentAccurate = async (
       textContent.items.forEach((item: any) => {
         const str = item.str || '';
         if (str.trim()) {
-          // item.transform: [scaleX, skewY, skewX, scaleY, transX, transY]
           const x = item.transform ? item.transform[4] : 0;
           const y = item.transform ? viewport.height - item.transform[5] : 0;
           items.push({
@@ -196,8 +199,7 @@ export const extractPdfContentAccurate = async (
         }
       });
 
-      if (items.length > 0) {
-        // Group items into lines based on vertical Y proximity (tolerance ~ 4-6px)
+      if (items.length > 5) {
         items.sort((a, b) => a.y - b.y);
 
         const lines: { y: number; items: PdfTextItem[] }[] = [];
@@ -212,17 +214,14 @@ export const extractPdfContentAccurate = async (
           }
         });
 
-        // Sort lines top-to-bottom
         lines.sort((a, b) => a.y - b.y);
 
-        // Sort items inside each line left-to-right
         const formattedPageLines: string[] = [];
         let prevLineY = 0;
 
         lines.forEach(line => {
           line.items.sort((a, b) => a.x - b.x);
 
-          // Build string with spaces between words
           let lineText = '';
           let prevItemX1 = 0;
           
@@ -237,7 +236,6 @@ export const extractPdfContentAccurate = async (
             prevItemX1 = it.x + (it.width || 0);
           });
 
-          // Check paragraph gap (extra blank line if vertical distance is large)
           if (prevLineY > 0 && line.y - prevLineY > 24) {
             formattedPageLines.push('');
           }
@@ -247,25 +245,41 @@ export const extractPdfContentAccurate = async (
         });
 
         pageOutputs.push(formattedPageLines.join('\n'));
+      } else {
+        isScannedPdf = true;
       }
     }
 
     const directExtracted = pageOutputs.join('\n\n').trim();
 
-    // If PDF was a flat image scan (scanned photocopy), fallback to Deep OCR
-    if (!directExtracted || directExtracted.length < 20) {
-      if (onProgress) onProgress('स्कैन/फोटो PDF पाई गई! AI OCR स्कैनिंग शुरू हो रही है...');
+    // If scanned document (like Bhagsur choki report), run Deep OCR engine
+    if (isScannedPdf || !directExtracted || directExtracted.length < 30) {
+      if (onProgress) onProgress('स्कैन/फोटो PDF पाई गई! AI डीप OCR (हिंदी + टेबल) स्कैनिंग शुरू हो रही है...');
       
       let ocrText = '';
-      const worker = await createWorker(['hin', 'eng']);
+      const worker = await createWorker(['hin', 'eng'], 1, {
+        logger: (m) => {
+          if (m.status === 'recognizing text' && onProgress) {
+            const pct = Math.round((m.progress || 0) * 100);
+            onProgress(`स्कैनिंग प्रगति... ${pct}%`);
+          }
+        }
+      });
+
+      await worker.setParameters({
+        tessedit_pageseg_mode: '6' as any,
+      });
 
       for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
         if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का अक्षर व टेबल स्कैन किया जा रहा है...`);
         const page = await pdf.getPage(i);
-        const pageImageDataUrl = await renderPdfPageToCanvas(page);
+        const rawCanvasDataUrl = await renderPdfPageToCanvas(page);
+        
+        // Enhance scan clarity before OCR
+        const preprocessedDataUrl = await preprocessImageForOcr(rawCanvasDataUrl);
 
-        if (pageImageDataUrl) {
-          const { data } = await worker.recognize(pageImageDataUrl);
+        if (preprocessedDataUrl) {
+          const { data } = await worker.recognize(preprocessedDataUrl);
           const pageFormatted = formatOcrDataWithLayout(data);
           if (pageFormatted.formattedText.trim()) {
             ocrText += pageFormatted.formattedText.trim() + '\n\n';
