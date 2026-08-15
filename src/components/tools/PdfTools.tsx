@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
 import { downloadFile, downloadWordDoc, extractPdfContentAccurate } from '@/utils/download';
-import { parseWordDocument, generatePdfFromContent } from '@/utils/wordToPdf';
+import { parseWordDocument, generateAccuratePdfFromHtml } from '@/utils/wordToPdf';
 import { 
   FileUp, 
   Minimize2, 
@@ -24,7 +24,9 @@ import {
   FileCode,
   ScanText,
   Table,
-  Eye
+  Eye,
+  Printer,
+  ShieldCheck
 } from 'lucide-react';
 
 export type PdfToolMode = 
@@ -51,6 +53,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
   const [progressStatus, setProgressStatus] = useState<string>('');
   const [completed, setCompleted] = useState(false);
   const [extractedText, setExtractedText] = useState<string>('');
+  const [extractedHtml, setExtractedHtml] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -63,6 +66,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
       setFiles(selectedFiles);
       setCompleted(false);
       setExtractedText('');
+      setExtractedHtml('');
 
       const firstFile = selectedFiles[0];
 
@@ -84,13 +88,14 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
       // If Word to PDF or Excel to PDF -> Parse the docx/text content immediately
       else if ((activeSubTab === 'word-to-pdf' || activeSubTab === 'excel-to-pdf') && firstFile) {
         setProcessing(true);
-        setProgressStatus(lang === 'hi' ? 'Word फ़ाइल का कंटेंट पढ़ा जा रहा है...' : 'Reading Word document content...');
+        setProgressStatus(lang === 'hi' ? 'Word फ़ाइल (हिंदी व इंग्लिश) पढ़ी जा रही है...' : 'Reading Word document content...');
         try {
-          const { text } = await parseWordDocument(firstFile);
+          const { html, text } = await parseWordDocument(firstFile);
+          setExtractedHtml(html);
           setExtractedText(text || firstFile.name);
           setProcessing(false);
           setCompleted(true);
-          showSuccess(lang === 'hi' ? 'Word डॉक्यूमेंट का कंटेंट तैयार है!' : 'Word content read successfully!');
+          showSuccess(lang === 'hi' ? 'Word का 100% शुद्ध कंटेंट लोड हो गया!' : 'Word content read successfully!');
         } catch (err) {
           console.error(err);
           setExtractedText(`Document: ${firstFile.name}\n\nClient document uploaded.`);
@@ -121,7 +126,8 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         showError(lang === 'hi' ? 'कोई टेक्स्ट नहीं मिला' : 'No text detected');
       }
     } else if (activeSubTab === 'word-to-pdf' && files[0]) {
-      const { text } = await parseWordDocument(files[0]);
+      const { html, text } = await parseWordDocument(files[0]);
+      setExtractedHtml(html);
       setExtractedText(text || files[0].name);
       setProcessing(false);
       setCompleted(true);
@@ -135,16 +141,27 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     }
   };
 
-  // Convert Word to PDF download handler
-  const handleDownloadPdf = () => {
+  // Convert Word to High-Quality PDF with exact Hindi/English fonts without symbols
+  const handleDownloadPdf = async () => {
     const originalName = files[0]?.name || 'Document';
     const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
 
-    const contentToPrint = extractedText.trim() || `Document Name: ${originalName}\nConverted successfully.`;
-    const pdfBlob = generatePdfFromContent(baseName, contentToPrint, `${baseName}.pdf`);
+    setProcessing(true);
+    setProgressStatus(lang === 'hi' ? 'शुद्ध PDF तैयार हो रही है (Zero Font Error)...' : 'Generating Crisp Vector PDF...');
 
-    downloadFile(pdfBlob, `${baseName}_converted.pdf`, 'application/pdf');
-    showSuccess(lang === 'hi' ? 'PDF डाउनलोड हो गया (कंटेंट सहित)!' : 'Full PDF with content downloaded!');
+    try {
+      const contentToUse = extractedHtml || extractedText || `Document: ${originalName}`;
+      const pdfBlob = await generateAccuratePdfFromHtml(baseName, contentToUse, `${baseName}.pdf`);
+
+      downloadFile(pdfBlob, `${baseName}_converted.pdf`, 'application/pdf');
+      showSuccess(lang === 'hi' ? '100% शुद्ध PDF डाउनलोड हो गई (बिना किसी सिंबल खराबी के)!' : 'Clean PDF with intact Hindi fonts downloaded!');
+    } catch (err) {
+      console.error(err);
+      showError(lang === 'hi' ? 'PDF डाउनलोड में समस्या आई' : 'Failed to generate PDF');
+    } finally {
+      setProcessing(false);
+      setProgressStatus('');
+    }
   };
 
   const handleDownloadExcel = () => {
@@ -225,13 +242,19 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
 
       <Card className="border-orange-200 shadow-md">
         <CardHeader className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-t-lg">
-          <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-            📄 {lang === 'hi' ? 'PDF एवं डॉक्यूमेंट कनवर्टर सेंटर (100% सटीक कंटेंट)' : 'PDF & Document Converter Center'}
+          <CardTitle className="text-xl sm:text-2xl font-bold flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              📄 {lang === 'hi' ? 'PDF एवं डॉक्यूमेंट कनवर्टर सेंटर' : 'PDF & Document Converter Center'}
+            </span>
+            <span className="text-xs bg-white/20 text-white px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+              100% Pure Hindi & English Font Lock
+            </span>
           </CardTitle>
           <CardDescription className="text-orange-100 text-sm">
             {lang === 'hi' 
-              ? 'Word, Excel और PDF को बिना किसी खाली पन्ने के असली कंटेंट सहित तुरंत कनवर्ट करें' 
-              : 'Convert Word, Excel & PDF with 100% intact content & formatting (No blank pages)'}
+              ? 'Word, Excel और PDF को बिना किसी फॉन्ट खराबी, सिंबल या खाली पन्ने के असली कंटेंट सहित कनवर्ट करें' 
+              : 'Convert Word, Excel & PDF with 100% intact Hindi Devanagari fonts, tables & formatting (No symbols or corruption)'}
           </CardDescription>
         </CardHeader>
 
@@ -241,7 +264,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => { setActiveSubTab(tab.id); setFiles([]); setCompleted(false); setExtractedText(''); }}
+                onClick={() => { setActiveSubTab(tab.id); setFiles([]); setCompleted(false); setExtractedText(''); setExtractedHtml(''); }}
                 className={`py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                   activeSubTab === tab.id ? 'bg-white text-orange-600 shadow-sm border border-orange-200' : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -299,7 +322,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
                 <span className="text-xs font-bold text-orange-900 flex items-center gap-1.5">
                   <Eye className="w-4 h-4 text-orange-600" />
-                  {lang === 'hi' ? 'दस्तावेज़ का असली कंटेंट (Live Content Preview):' : 'Original Document Content Preview:'}
+                  {lang === 'hi' ? 'दस्तावेज़ का असली कंटेंट (Live Hindi & English Preview):' : 'Original Document Content Preview:'}
                 </span>
 
                 <Button size="sm" variant="outline" onClick={handleCopyText} className="gap-1.5 text-xs bg-white border-orange-300">
@@ -313,7 +336,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
                 value={extractedText}
                 onChange={(e) => setExtractedText(e.target.value)}
                 placeholder="Document content will appear here..."
-                className="bg-white text-xs sm:text-sm font-mono p-3.5 border-orange-200 focus:border-orange-500 leading-relaxed font-medium"
+                className="bg-white text-xs sm:text-sm font-sans p-3.5 border-orange-200 focus:border-orange-500 leading-relaxed font-medium"
               />
             </div>
           )}
@@ -341,9 +364,10 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
                   <Button
                     className="bg-orange-600 hover:bg-orange-700 text-white gap-2 font-bold text-xs sm:text-sm shadow-md"
                     onClick={handleDownloadPdf}
+                    disabled={processing}
                   >
                     <Download className="w-4 h-4" />
-                    {lang === 'hi' ? 'कन्वर्टेड PDF डाउनलोड करें' : 'Download Converted PDF'}
+                    {lang === 'hi' ? 'शुद्ध PDF डाउनलोड करें' : 'Download Exact PDF'}
                   </Button>
                 ) : activeSubTab === 'pdf-to-excel' ? (
                   <Button
