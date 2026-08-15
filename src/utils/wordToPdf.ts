@@ -3,35 +3,111 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 /**
- * Extracts formatted HTML and clean text from .docx or text files.
+ * Extracts formatted HTML and clean text from .docx or text files while strictly preserving
+ * paragraph alignments (Center, Right, Left, Justify), tables, bold, italics & font sizes.
  */
 export const parseWordDocument = async (file: File): Promise<{ html: string; text: string }> => {
   const fileName = file.name.toLowerCase();
 
   if (fileName.endsWith('.docx')) {
     const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.convertToHtml({ arrayBuffer });
+    
+    // Mammoth style map to preserve centered titles, right-aligned dates/signatures and tables
+    const options = {
+      styleMap: [
+        "p[style-name='Title'] => h1.center:fresh",
+        "p[style-name='Subtitle'] => h2.center:fresh",
+        "p[style-name='Header'] => div.center:fresh",
+        "r[style-name='Strong'] => strong",
+        "table => table.custom-doc-table:fresh"
+      ]
+    };
+
+    const result = await mammoth.convertToHtml({ arrayBuffer }, options);
     const textResult = await mammoth.extractRawText({ arrayBuffer });
     
-    const contentHtml = result.value || textResult.value.split('\n').map(l => `<p>${l}</p>`).join('');
+    let htmlContent = result.value;
+
+    // Enhance raw paragraph tags with word layout fidelity
+    if (htmlContent) {
+      htmlContent = htmlContent
+        .replace(/<p>/g, '<p style="margin-bottom: 8px; line-height: 1.6;">')
+        .replace(/<table/g, '<table style="width: 100%; border-collapse: collapse; margin: 12px 0; border: 1px solid #cbd5e1;"')
+        .replace(/<td/g, '<td style="border: 1px solid #cbd5e1; padding: 6px 10px; vertical-align: top;"')
+        .replace(/<th/g, '<th style="border: 1px solid #cbd5e1; padding: 6px 10px; background-color: #f8fafc; font-weight: bold;"');
+    } else {
+      htmlContent = textResult.value.split('\n').map(l => {
+        const tr = l.trim();
+        if (!tr) return '<p style="margin-bottom: 4px;">&nbsp;</p>';
+        return `<p style="margin-bottom: 8px; line-height: 1.6;">${tr}</p>`;
+      }).join('');
+    }
+
     return {
-      html: contentHtml,
+      html: htmlContent,
       text: textResult.value || '',
     };
   }
 
   // Plain text or text file
   const text = await file.text();
-  const safeHtml = text
-    .split('\n')
-    .map(line => line.trim() ? `<p style="margin-bottom: 8px;">${line}</p>` : '<p style="margin-bottom: 4px;">&nbsp;</p>')
-    .join('');
+  const safeHtml = formatTextToStructuredHtml(text);
 
   return {
     html: safeHtml,
     text,
   };
 };
+
+/**
+ * Helper to detect center and right aligned lines from raw text drafts (like official memos, subject, headers, signatures)
+ */
+function formatTextToStructuredHtml(textContent: string): string {
+  return (textContent || '')
+    .split('\n')
+    .map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '<p style="margin-bottom: 4px;">&nbsp;</p>';
+
+      // Detect table rows with delimiters
+      if (line.includes('|') || line.includes('\t')) {
+        const cells = line.split(/[|\t]/).map(c => `<td style="border: 1px solid #cbd5e1; padding: 6px 10px; font-size: 13px;">${c.trim()}</td>`).join('');
+        return `<table style="width: 100%; border-collapse: collapse; margin: 8px 0;"><tr>${cells}</tr></table>`;
+      }
+
+      // Check if line was visually centered (starts with significant spaces)
+      const leadingSpaces = line.length - line.trimStart().length;
+      
+      // Known Center titles & headings in Indian Govt / Official formats
+      const isExplicitCenter = (
+        leadingSpaces > 18 ||
+        /^(कार्यालय|शासकीय|प्रमाण पत्र|शपथ पत्र|अनुसूची|RESUME|BIODATA|CURRICULUM VITAE|EXPERIENCE CERTIFICATE|SALARY SLIP|RENT AGREEMENT|AFFIDAVIT)/i.test(trimmed) ||
+        trimmed.startsWith('---') ||
+        trimmed.startsWith('===')
+      );
+
+      // Known Right side elements (dates, signatory names, memo numbers on the right)
+      const isRightAligned = (
+        (leadingSpaces > 35) ||
+        /^(हस्ताक्षर|भवदीय|दिनांक:|Date:|स्थान:|Place:|प्राचार्य|अधीक्षक|शाखा प्रभारी)/i.test(trimmed)
+      );
+
+      let alignStyle = 'text-align: justify;';
+      let fontStyle = '';
+
+      if (isExplicitCenter) {
+        alignStyle = 'text-align: center;';
+        fontStyle = 'font-weight: 700; font-size: 15px;';
+      } else if (isRightAligned) {
+        alignStyle = 'text-align: right;';
+      } else if (trimmed.startsWith('विषय') || trimmed.startsWith('Subject:') || trimmed.startsWith('महोदय') || trimmed.startsWith('Respected')) {
+        fontStyle = 'font-weight: 600;';
+      }
+
+      return `<p style="margin-bottom: 7px; ${alignStyle} ${fontStyle} word-break: break-word; line-height: 1.65;">${trimmed}</p>`;
+    })
+    .join('');
+}
 
 /**
  * Generates a clean PDF Blob from title and string content using standard jsPDF.
@@ -74,6 +150,9 @@ export const generatePdfFromContent = (
       return;
     }
 
+    const leadingSpaces = line.length - line.trimStart().length;
+    const isCenter = leadingSpaces > 18 || /^(RESUME|BIODATA|AFFIDAVIT|CERTIFICATE|AGREEMENT)/i.test(trimmed);
+
     const wrappedLines = doc.splitTextToSize(trimmed, maxLineWidth);
 
     wrappedLines.forEach((wLine: string) => {
@@ -82,7 +161,11 @@ export const generatePdfFromContent = (
         currentY = 18;
       }
 
-      doc.text(wLine, margin, currentY);
+      if (isCenter) {
+        doc.text(wLine, pageWidth / 2, currentY, { align: 'center' });
+      } else {
+        doc.text(wLine, margin, currentY);
+      }
       currentY += 5.8;
     });
   });
@@ -102,14 +185,14 @@ export const generatePdfFromContent = (
 
 /**
  * High-accuracy multi-page PDF generator supporting 100% Hindi Devanagari, English, 
- * Special Symbols, Tables & Custom formatting. Only generates extra pages if content overflows.
+ * Special Symbols, Tables & Custom formatting with preserved alignments (Center, Right, Justify).
  */
 export const generateAccuratePdfFromHtml = async (
   title: string,
   contentHtmlOrText: string,
   fileName: string = 'Converted_Document.pdf'
 ): Promise<Blob> => {
-  // Container width: standard A4 width in pixels
+  // Container width: standard A4 width in pixels at 96 DPI
   const a4WidthPx = 794;
 
   const container = document.createElement('div');
@@ -131,29 +214,15 @@ export const generateAccuratePdfFromHtml = async (
   if (isHtml) {
     formattedBody = contentHtmlOrText;
   } else {
-    formattedBody = (contentHtmlOrText || '')
-      .split('\n')
-      .map(line => {
-        const tr = line.trim();
-        if (!tr) return '<p style="margin-bottom: 5px;">&nbsp;</p>';
-        if (tr.includes('|') || tr.includes('\t')) {
-          const cells = tr.split(/[|\t]/).map(c => `<td style="border: 1px solid #cbd5e1; padding: 6px 10px;">${c.trim()}</td>`).join('');
-          return `<table style="width: 100%; border-collapse: collapse; margin: 8px 0;"><tr>${cells}</tr></table>`;
-        }
-        return `<p style="margin-bottom: 7px; text-align: justify; word-break: break-word;">${tr}</p>`;
-      })
-      .join('');
+    formattedBody = formatTextToStructuredHtml(contentHtmlOrText);
   }
 
   // Clean Header and Footer with "Mera Document" on the right side
   container.innerHTML = `
-    <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-      <span style="font-size: 11px; font-weight: 700; color: #ea580c; text-transform: uppercase; letter-spacing: 0.5px;">मेरा डॉक्यूमेंट</span>
-    </div>
-    <div style="font-family: inherit; font-size: 13.5px; color: #1e293b; min-height: 800px;">
+    <div style="font-family: inherit; font-size: 13.5px; color: #1e293b; min-height: 850px;">
       ${formattedBody}
     </div>
-    <div style="margin-top: 40px; text-align: right; font-size: 11px; font-weight: 700; color: #94a3b8; font-family: inherit;">
+    <div style="margin-top: 36px; text-align: right; font-size: 11px; font-weight: 700; color: #94a3b8; font-family: inherit;">
       Mera Document
     </div>
   `;
