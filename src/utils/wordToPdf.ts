@@ -53,7 +53,7 @@ export const generatePdfFromContent = (
   const maxLineWidth = pageWidth - margin * 2;
   let currentY = 20;
 
-  // Simple Clean Mera Document Header (No extra colored bars)
+  // Simple Clean Mera Document Header
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(234, 88, 12);
@@ -77,7 +77,7 @@ export const generatePdfFromContent = (
     const wrappedLines = doc.splitTextToSize(trimmed, maxLineWidth);
 
     wrappedLines.forEach((wLine: string) => {
-      if (currentY + 7 > pageHeight - 15) {
+      if (currentY + 7 > pageHeight - 18) {
         doc.addPage();
         currentY = 18;
       }
@@ -86,6 +86,16 @@ export const generatePdfFromContent = (
       currentY += 5.8;
     });
   });
+
+  // Add "Mera Document" to the bottom right footer of each page
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Mera Document', pageWidth - margin, pageHeight - 10, { align: 'right' });
+  }
 
   return doc.output('blob');
 };
@@ -101,7 +111,6 @@ export const generateAccuratePdfFromHtml = async (
 ): Promise<Blob> => {
   // Container width: standard A4 width in pixels
   const a4WidthPx = 794;
-  const a4PageHeightPx = 1123; // Exact 1 A4 page height at 96 DPI
 
   const container = document.createElement('div');
   container.style.position = 'fixed';
@@ -136,13 +145,16 @@ export const generateAccuratePdfFromHtml = async (
       .join('');
   }
 
-  // Clean Header with ONLY "मेरा डॉक्यूमेंट" (No extra lines or bars)
+  // Clean Header and Footer with "Mera Document" on the right side
   container.innerHTML = `
     <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
       <span style="font-size: 11px; font-weight: 700; color: #ea580c; text-transform: uppercase; letter-spacing: 0.5px;">मेरा डॉक्यूमेंट</span>
     </div>
-    <div style="font-family: inherit; font-size: 13.5px; color: #1e293b;">
+    <div style="font-family: inherit; font-size: 13.5px; color: #1e293b; min-height: 800px;">
       ${formattedBody}
+    </div>
+    <div style="margin-top: 40px; text-align: right; font-size: 11px; font-weight: 700; color: #94a3b8; font-family: inherit;">
+      Mera Document
     </div>
   `;
 
