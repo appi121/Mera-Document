@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Language } from '@/types/document';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
 import { downloadFile, downloadWordDoc, extractPdfContentAccurate } from '@/utils/download';
@@ -23,48 +21,15 @@ import {
   convertImagesToPdf,
   convertPdfToJpgImages
 } from '@/utils/pdfOperations';
-import { 
-  FileUp, 
-  Minimize2, 
-  Layers, 
-  FileImage, 
-  Download, 
-  ArrowLeft, 
-  CheckCircle,
-  FileText,
-  FileSpreadsheet,
-  Presentation,
-  Scissors,
-  Copy,
-  Check,
-  Sparkles,
-  FileCode,
-  ScanText,
-  Table,
-  Eye,
-  ShieldCheck,
-  Wand2,
-  Brain,
-  RotateCw,
-  Hash,
-  Stamp,
-  Image as ImageIcon
-} from 'lucide-react';
+import { FileUp, ArrowLeft, ShieldCheck, Brain, ScanText } from 'lucide-react';
 
-export type PdfToolMode = 
-  | 'pdf-to-word' 
-  | 'pdf-to-excel'
-  | 'pdf-to-jpg'
-  | 'word-to-pdf' 
-  | 'excel-to-pdf' 
-  | 'ppt-to-pdf' 
-  | 'img-to-pdf' 
-  | 'merge' 
-  | 'split' 
-  | 'compress'
-  | 'rotate'
-  | 'page-numbers'
-  | 'watermark';
+import { PdfToolMode, PdfToolTabs, PDF_TOOL_TABS } from './pdf/PdfToolTabs';
+import { PdfPresetBar } from './pdf/PdfPresetBar';
+import { PdfOptionsBar } from './pdf/PdfOptionsBar';
+import { PdfPreviewSection } from './pdf/PdfPreviewSection';
+import { PdfActionBar } from './pdf/PdfActionBar';
+
+export type { PdfToolMode };
 
 interface PdfToolsProps {
   lang: Language;
@@ -108,8 +73,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     setPdfImages([]);
   };
 
-  // Direct Verified Presets
-  const loadPresetFormat = (formatId: 'adobe-scan' | 'new-doc' | 'emp-list') => {
+  const handlePresetSelect = (formatId: 'adobe-scan' | 'new-doc' | 'emp-list') => {
     setFiles([]);
     setCompleted(true);
     setIsAiOptimized(true);
@@ -240,7 +204,6 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         showSuccess(lang === 'hi' ? 'JPG फोटोज तैयार हैं!' : 'PDF converted to JPG images!');
       } else if (activeSubTab === 'compress' && files[0]) {
         setProgressStatus(lang === 'hi' ? 'PDF कंप्रेस की जा रही है...' : 'Compressing PDF...');
-        // Standard PDF optimization
         const rotBlob = await rotatePdfFile(files[0], 0);
         setGeneratedBlob(rotBlob);
         setCompleted(true);
@@ -268,9 +231,9 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     }
   };
 
-  const handleDownloadDirectBlob = (filename: string) => {
+  const handleDownloadDirectBlob = () => {
     if (generatedBlob) {
-      downloadFile(generatedBlob, filename, 'application/pdf');
+      downloadFile(generatedBlob, `${activeSubTab}_converted.pdf`, 'application/pdf');
       showSuccess(lang === 'hi' ? 'PDF डाउनलोड हो गई!' : 'PDF downloaded!');
     }
   };
@@ -354,22 +317,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const tabs: { id: PdfToolMode; titleHi: string; titleEn: string; icon: React.ReactNode; accept: string; isMultiple?: boolean }[] = [
-    { id: 'pdf-to-word', titleHi: 'PDF to Word', titleEn: 'PDF to Word', icon: <FileText className="w-4 h-4 text-red-600" />, accept: '.pdf' },
-    { id: 'pdf-to-excel', titleHi: 'PDF to Excel', titleEn: 'PDF to Excel', icon: <Table className="w-4 h-4 text-emerald-600" />, accept: '.pdf' },
-    { id: 'merge', titleHi: 'Merge PDF', titleEn: 'Merge PDF', icon: <Layers className="w-4 h-4 text-indigo-600" />, accept: '.pdf', isMultiple: true },
-    { id: 'split', titleHi: 'Split PDF', titleEn: 'Split PDF', icon: <Scissors className="w-4 h-4 text-pink-600" />, accept: '.pdf' },
-    { id: 'compress', titleHi: 'Compress PDF', titleEn: 'Compress PDF', icon: <Minimize2 className="w-4 h-4 text-teal-600" />, accept: '.pdf' },
-    { id: 'pdf-to-jpg', titleHi: 'PDF to JPG', titleEn: 'PDF to JPG', icon: <ImageIcon className="w-4 h-4 text-amber-600" />, accept: '.pdf' },
-    { id: 'img-to-pdf', titleHi: 'JPG to PDF', titleEn: 'JPG to PDF', icon: <FileImage className="w-4 h-4 text-blue-600" />, accept: 'image/*', isMultiple: true },
-    { id: 'rotate', titleHi: 'Rotate PDF', titleEn: 'Rotate PDF', icon: <RotateCw className="w-4 h-4 text-violet-600" />, accept: '.pdf' },
-    { id: 'page-numbers', titleHi: 'Page Numbers', titleEn: 'Page Numbers', icon: <Hash className="w-4 h-4 text-cyan-600" />, accept: '.pdf' },
-    { id: 'watermark', titleHi: 'Watermark PDF', titleEn: 'Watermark PDF', icon: <Stamp className="w-4 h-4 text-rose-600" />, accept: '.pdf' },
-    { id: 'word-to-pdf', titleHi: 'Word to PDF', titleEn: 'Word to PDF', icon: <FileText className="w-4 h-4 text-blue-600" />, accept: '.doc,.docx,.txt' },
-    { id: 'excel-to-pdf', titleHi: 'Excel to PDF', titleEn: 'Excel to PDF', icon: <FileSpreadsheet className="w-4 h-4 text-emerald-600" />, accept: '.xls,.xlsx,.csv' },
-  ];
-
-  const currentTab = tabs.find(t => t.id === activeSubTab) || tabs[0];
+  const currentTab = PDF_TOOL_TABS.find(t => t.id === activeSubTab) || PDF_TOOL_TABS[0];
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -399,109 +347,29 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
 
         <CardContent className="p-6 space-y-6">
           {/* Quick Format Presets */}
-          <div className="bg-orange-50/60 border border-orange-200 rounded-2xl p-3.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-orange-900 uppercase tracking-wider">
-              <Sparkles className="w-4 h-4 text-orange-600" />
-              {lang === 'hi' ? 'वेरिफाइड फॉर्मेट्स (1-क्लिक टेस्ट करें):' : 'Verified Templates (1-Click Instant Test):'}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadPresetFormat('adobe-scan')}
-                className="bg-white hover:bg-orange-100 border-orange-200 text-gray-800 text-xs font-semibold justify-start gap-2 h-auto py-1.5"
-              >
-                <FileText className="w-3.5 h-3.5 text-orange-600 shrink-0" />
-                <span className="truncate">Format 1: Adobe Scan शासकीय पत्र</span>
-              </Button>
+          <PdfPresetBar lang={lang} onSelectPreset={handlePresetSelect} />
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadPresetFormat('new-doc')}
-                className="bg-white hover:bg-orange-100 border-orange-200 text-gray-800 text-xs font-semibold justify-start gap-2 h-auto py-1.5"
-              >
-                <FileText className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="truncate">Format 2: New Doc समीक्षा ज्ञापन</span>
-              </Button>
+          {/* Mode Selector Tabs */}
+          <PdfToolTabs
+            lang={lang}
+            activeTab={activeSubTab}
+            onTabChange={(tab) => {
+              setActiveSubTab(tab);
+              resetToolState();
+            }}
+          />
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadPresetFormat('emp-list')}
-                className="bg-white hover:bg-emerald-50 border-emerald-300 text-gray-800 text-xs font-semibold justify-start gap-2 h-auto py-1.5 shadow-sm"
-              >
-                <Table className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="truncate text-emerald-800 font-bold">Format 3: Emp Offices Excel टेबल</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Systematic iLovePDF-style Tab Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-1.5 p-1.5 bg-slate-100 rounded-xl">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => { setActiveSubTab(tab.id); resetToolState(); }}
-                className={`py-2 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  activeSubTab === tab.id ? 'bg-white text-orange-600 shadow-sm border border-orange-300' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {tab.icon}
-                <span className="truncate">{lang === 'hi' ? tab.titleHi : tab.titleEn}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Tool-Specific Parameter Settings */}
-          {activeSubTab === 'split' && (
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <span className="font-bold text-slate-800">
-                {lang === 'hi' ? 'पेज रेंज दर्ज करें (उदा. 1-3 या 2,4):' : 'Enter Page Range (e.g. 1-3 or 2,4):'}
-              </span>
-              <Input
-                value={pageRange}
-                onChange={(e) => setPageRange(e.target.value)}
-                placeholder="1-2"
-                className="w-40 bg-white border-slate-300 text-xs font-bold"
-              />
-            </div>
-          )}
-
-          {activeSubTab === 'rotate' && (
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <span className="font-bold text-slate-800">
-                {lang === 'hi' ? 'रोटेशन एंगल चुनें:' : 'Select Rotation Angle:'}
-              </span>
-              <div className="flex gap-2">
-                {[90, 180, 270].map((deg) => (
-                  <Button
-                    key={deg}
-                    size="sm"
-                    variant={rotationAngle === deg ? 'default' : 'outline'}
-                    onClick={() => setRotationAngle(deg)}
-                    className={rotationAngle === deg ? 'bg-orange-600 text-white font-bold text-xs' : 'text-xs'}
-                  >
-                    {deg}° Right
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeSubTab === 'watermark' && (
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <span className="font-bold text-slate-800">
-                {lang === 'hi' ? 'वाटरमार्क टेक्स्ट लिखें:' : 'Watermark Text:'}
-              </span>
-              <Input
-                value={watermarkText}
-                onChange={(e) => setWatermarkText(e.target.value)}
-                placeholder="CONFIDENTIAL"
-                className="max-w-xs bg-white border-slate-300 text-xs font-bold"
-              />
-            </div>
-          )}
+          {/* Dynamic Options Bar */}
+          <PdfOptionsBar
+            lang={lang}
+            activeSubTab={activeSubTab}
+            pageRange={pageRange}
+            setPageRange={setPageRange}
+            rotationAngle={rotationAngle}
+            setRotationAngle={setRotationAngle}
+            watermarkText={watermarkText}
+            setWatermarkText={setWatermarkText}
+          />
 
           {/* Upload Drop Zone */}
           <div className="border-2 border-dashed border-orange-300 bg-orange-50/40 rounded-2xl p-8 text-center hover:bg-orange-50 transition-colors relative cursor-pointer">
@@ -545,139 +413,34 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
             </div>
           )}
 
-          {/* PDF to JPG Images Gallery */}
-          {pdfImages.length > 0 && (
-            <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-3">
-              <span className="text-xs font-bold text-amber-900">
-                {lang === 'hi' ? 'निकाली गई JPG फोटोज (1-क्लिक डाउनलोड):' : 'Extracted JPG Images:'}
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {pdfImages.map((img, idx) => (
-                  <div key={idx} className="bg-white p-2 rounded-lg border shadow-sm text-center space-y-2">
-                    <img src={img.dataUrl} alt={`Page ${img.pageNum}`} className="h-32 object-contain mx-auto border" />
-                    <a
-                      href={img.dataUrl}
-                      download={`Page_${img.pageNum}.jpg`}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:underline"
-                    >
-                      <Download className="w-3 h-3" /> Page {img.pageNum} JPG
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Live Document Preview */}
-          {extractedText && (
-            <div className="border border-orange-200 rounded-xl p-4 bg-orange-50/30 space-y-3">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-orange-900 flex items-center gap-1.5">
-                    <Eye className="w-4 h-4 text-orange-600" />
-                    {lang === 'hi' ? 'दस्तावेज़ लाइव प्रीव्यू:' : 'Live Preview:'}
-                  </span>
-                  {isAiOptimized && (
-                    <Badge className="bg-emerald-600 text-white text-[10px] px-2 py-0">
-                      ✓ AI 100% Formatted
-                    </Badge>
-                  )}
-                </div>
-
-                <Button size="sm" variant="outline" onClick={handleCopyText} className="gap-1.5 text-xs bg-white border-orange-300">
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-orange-600" />}
-                  {copied ? (lang === 'hi' ? 'कॉपी हो गया' : 'Copied') : (lang === 'hi' ? 'टेक्स्ट कॉपी' : 'Copy Text')}
-                </Button>
-              </div>
-
-              {tableGrid.length > 0 && (
-                <div className="border border-emerald-200 rounded-xl overflow-x-auto max-h-[260px] bg-white p-2">
-                  <table className="w-full text-xs text-left border-collapse font-sans min-w-[650px]">
-                    <tbody>
-                      {tableGrid.map((row, rIdx) => (
-                        <tr key={rIdx} className={rIdx === 0 ? 'bg-orange-600 text-white font-bold' : rIdx % 2 === 0 ? 'bg-orange-50/30' : 'bg-white'}>
-                          {row.map((cell, cIdx) => (
-                            <td key={cIdx} className="border border-slate-300 p-2 vertical-top font-medium text-slate-800">
-                              {cell}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              <Textarea
-                rows={7}
-                value={extractedText}
-                onChange={(e) => setExtractedText(e.target.value)}
-                className="bg-white text-xs sm:text-sm font-sans p-3 border-orange-200 leading-relaxed font-medium whitespace-pre"
-              />
-            </div>
-          )}
+          {/* Live Preview Section */}
+          <PdfPreviewSection
+            lang={lang}
+            extractedText={extractedText}
+            setExtractedText={setExtractedText}
+            tableGrid={tableGrid}
+            isAiOptimized={isAiOptimized}
+            copied={copied}
+            onCopyText={handleCopyText}
+            pdfImages={pdfImages}
+          />
 
           {/* Action & Download Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-            <Button
-              onClick={handleAction}
-              disabled={files.length === 0 && !extractedText}
-              className="w-full sm:w-auto px-8 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow text-xs sm:text-sm"
-            >
-              {processing ? (
-                <span>{lang === 'hi' ? 'प्रोसेस हो रहा है...' : 'Processing...'}</span>
-              ) : (
-                <span>
-                  {lang === 'hi' ? `${currentTab.titleHi} शुरू करें` : `Execute ${currentTab.titleEn}`}
-                </span>
-              )}
-            </Button>
-
-            {(completed || extractedText || generatedBlob) && (
-              <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-                {generatedBlob ? (
-                  <Button
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-bold text-xs sm:text-sm shadow-md"
-                    onClick={() => handleDownloadDirectBlob(`${activeSubTab}_converted.pdf`)}
-                  >
-                    <Download className="w-4 h-4" />
-                    {lang === 'hi' ? 'तैयार PDF डाउनलोड करें' : 'Download PDF'}
-                  </Button>
-                ) : (activeSubTab === 'word-to-pdf' || activeSubTab === 'excel-to-pdf' || activeSubTab === 'ppt-to-pdf' || activeSubTab === 'img-to-pdf') ? (
-                  <Button
-                    className="bg-orange-600 hover:bg-orange-700 text-white gap-2 font-bold text-xs sm:text-sm shadow-md"
-                    onClick={handleDownloadPdf}
-                    disabled={processing}
-                  >
-                    <Download className="w-4 h-4" />
-                    {lang === 'hi' ? 'शुद्ध PDF डाउनलोड करें' : 'Download Exact PDF'}
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="border-emerald-500 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 gap-2 font-semibold text-xs sm:text-sm shadow-sm"
-                      onClick={handleDownloadExcel}
-                    >
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                      <Download className="w-4 h-4" />
-                      {lang === 'hi' ? 'MS Excel (.xls)' : 'Download MS Excel'}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="border-indigo-500 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 gap-2 font-semibold text-xs sm:text-sm shadow-sm"
-                      onClick={handleDownloadWord}
-                    >
-                      <CheckCircle className="w-4 h-4 text-indigo-600" />
-                      <Download className="w-4 h-4" />
-                      {lang === 'hi' ? 'MS Word (.doc)' : 'Download MS Word'}
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          <PdfActionBar
+            lang={lang}
+            activeSubTab={activeSubTab}
+            toolTitle={lang === 'hi' ? currentTab.titleHi : currentTab.titleEn}
+            filesLength={files.length}
+            hasExtractedText={!!extractedText}
+            processing={processing}
+            completed={completed}
+            hasGeneratedBlob={!!generatedBlob}
+            onExecute={handleAction}
+            onDownloadDirectBlob={handleDownloadDirectBlob}
+            onDownloadPdf={handleDownloadPdf}
+            onDownloadExcel={handleDownloadExcel}
+            onDownloadWord={handleDownloadWord}
+          />
         </CardContent>
       </Card>
     </div>
