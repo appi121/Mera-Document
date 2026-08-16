@@ -18,14 +18,14 @@ export const toolsData: ToolItem[] = [
   // 2. iLovePDF Core Suite: Convert FROM PDF
   {
     id: 'pdf-to-word',
-    titleHi: '📄 PDF to Word (AI OCR)',
+    titleHi: '📄 PDF to Word (Real DOCX)',
     titleEn: '📄 PDF to Word Converter',
-    descHi: 'PDF एवं स्कैन कागज़ात को 100% शुद्ध एडिटेबल Word (DOCX) में बदलें',
-    descEn: 'Convert PDF & scanned documents into clean editable Word docs',
+    descHi: 'PDF एवं स्कैन कागज़ात को असली एडिटेबल Word (.docx) में बदलें',
+    descEn: 'Convert PDF & scanned documents into genuine editable Word (.docx) files',
     icon: 'pdf-to-word',
     category: 'convert-from-pdf',
-    badgeHi: 'Top #1',
-    badgeEn: 'Top #1',
+    badgeHi: 'DOCX Format',
+    badgeEn: 'DOCX Format',
     keywords: 'pdf to word convert doc docx ocr scanner text'
   },
   {
@@ -54,10 +54,10 @@ export const toolsData: ToolItem[] = [
   // 3. iLovePDF Core Suite: Convert TO PDF
   {
     id: 'word-to-pdf',
-    titleHi: '📝 Word to PDF',
+    titleHi: '📝 Word to PDF (Devanagari)',
     titleEn: '📝 Word to PDF Converter',
-    descHi: 'Word (DOC/DOCX) फ़ाइल को ओरिजिनल लेआउट के साथ PDF में बदलें',
-    descEn: 'Convert Word document to PDF with layout & fonts preserved',
+    descHi: 'Word (.docx) फ़ाइल को Noto Sans Devanagari फ़ॉन्ट के साथ PDF में बदलें',
+    descEn: 'Convert Word document to PDF with Hindi font rendering preserved',
     icon: 'word-to-pdf',
     category: 'convert-to-pdf',
     keywords: 'word to pdf doc to pdf docx'
@@ -84,13 +84,13 @@ export const toolsData: ToolItem[] = [
   },
   {
     id: 'img-to-pdf',
-    titleHi: '🖼️ JPG to PDF',
-    titleEn: '🖼️ JPG to PDF Converter',
-    descHi: 'JPG, PNG फोटो को 1 क्लिक में व्यवस्थित PDF फाइल बनाएं',
-    descEn: 'Convert JPG, PNG photos into single clean PDF',
+    titleHi: '🖼️ Image to PDF (JPG/PNG/WEBP)',
+    titleEn: '🖼️ Image to PDF Converter',
+    descHi: 'JPG, PNG, WEBP फोटो को 1 क्लिक में व्यवस्थित PDF फाइल बनाएं',
+    descEn: 'Convert JPG, PNG, WEBP photos into single clean PDF',
     icon: 'img-to-pdf',
     category: 'convert-to-pdf',
-    keywords: 'jpg to pdf image to pdf photo to pdf'
+    keywords: 'jpg to pdf image to pdf photo to pdf webp'
   },
 
   // 4. iLovePDF Core Suite: Organize & Optimize PDF
@@ -102,7 +102,7 @@ export const toolsData: ToolItem[] = [
     descEn: 'Combine multiple PDF files into one single organized PDF',
     icon: 'merge-pdf',
     category: 'organize',
-    badgeHi: 'पॉपुलर',
+    badgeHi: 'Popular',
     badgeEn: 'Popular',
     keywords: 'merge pdf combine join multiple pdf'
   },
@@ -120,8 +120,8 @@ export const toolsData: ToolItem[] = [
     id: 'compress-pdf',
     titleHi: '🗜️ Compress PDF (साइज कम करें)',
     titleEn: '🗜️ Compress PDF Size',
-    descHi: 'PDF का फाइल साइज (MB से KB) गुणवत्ता बनाए रखते हुए कम करें',
-    descEn: 'Reduce PDF file size without losing readability & quality',
+    descHi: 'PDF का फाइल साइज (MB से KB) वास्तविक कंप्रेसन से कम करें',
+    descEn: 'Reduce PDF file size with real browser-based image compression',
     icon: 'compress-pdf',
     category: 'organize',
     keywords: 'compress pdf reduce size small pdf mb to kb'
@@ -309,5 +309,17 @@ export const toolsData: ToolItem[] = [
     icon: 'templates',
     category: 'popular',
     keywords: 'document templates rent agreement payment receipt salary slip'
+  },
+  {
+    id: 'diagnostics',
+    titleHi: '🧪 ब्राउज़र टूल डायग्नोस्टिक्स',
+    titleEn: '🧪 Browser Test Diagnostics',
+    descHi: 'Word, PDF, Merge, Split, Compress और OCR का स्वचालित परीक्षण करें',
+    descEn: 'Automated in-browser test suite for real document conversions',
+    icon: 'ai-studio',
+    category: 'utilities',
+    badgeHi: 'Dev Tests',
+    badgeEn: 'Dev Tests',
+    keywords: 'diagnostics test suite test word to pdf docx split merge compress ocr'
   },
 ];

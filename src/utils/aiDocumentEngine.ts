@@ -1,7 +1,7 @@
 /**
  * Mera Document Universal AI Intelligence Engine
- * Automatically detects document intent, corrects Devanagari OCR glyphs,
- * reconstructs multi-column tables, centers slogans & headings, and locks official formatting.
+ * Automatically detects document structure, cleans Devanagari OCR glyphs,
+ * reconstructs multi-column tables, centers headings, and locks official formatting.
  */
 
 export interface ProcessedDocumentResult {
@@ -12,12 +12,11 @@ export interface ProcessedDocumentResult {
   wordCount: number;
 }
 
-// Common Devanagari OCR broken character & spelling dictionary
+// Common Devanagari OCR broken character dictionary
 const DEVANAGARI_REPAIR_MAP: Record<string, string> = {
   'भागसर': 'भागसुर',
-  'चौक': 'चौकी',
+  'चौक ': 'चौकी ',
   'कायलय': 'कार्यालय',
-  'कायलि': 'कार्यालय',
   'दतावेज़': 'दस्तावेज़',
   'दस्तावेज': 'दस्तावेज़',
   'क्रमाक': 'क्रमांक',
@@ -26,29 +25,23 @@ const DEVANAGARI_REPAIR_MAP: Record<string, string> = {
   'महदय': 'महोदय',
   'भवदय': 'भवदीय',
   'भवदीया': 'भवदीय',
-  'हस्ताक्षर': 'हस्ताक्षर',
   'हस्ताक्षरार्थ': 'हस्ताक्षरार्थ',
   'अवलाकनार्थ': 'अवलोकनार्थ',
   'अनमोदनाथ': 'अनुमोदनार्थ',
   'सप्रमाण': 'सप्रमाण',
   'सामाग्री': 'सामग्री',
-  'उपयोगी सामाग्री': 'उपयोगी सामग्री',
   'व्या.शिक्षा': 'व्यावसायिक शिक्षा',
   'पदोन्नती': 'पदोन्नति',
   'अभ्युक्तिया': 'अभ्युक्तियां',
-  'अभ्युक्तियां': 'अभ्युक्तियां',
   'प्रधानाध्यापक': 'प्रधानाध्यापक',
   'स्नातकात्तर': 'स्नातकोत्तर',
   'स्वतंत्रता दिवस': 'स्वतंत्रता दिवस',
-  'स्लोगन': 'स्लोगन',
   'जय जवान जय किसान': 'जय जवान, जय किसान',
   'सत्यमेव जयते': 'सत्यमेव जयते',
-  'रोजगार कार्यालय': 'रोजगार कार्यालय',
-  'जिला रोजगार': 'जिला रोजगार अधिकारी',
 };
 
 /**
- * 100% Exact Verified Data for Format 3: List of Employment Offices (Tabular Directory)
+ * Sample Template Presets (Used exclusively for quick 1-click demonstrations)
  */
 export const VERIFIED_EMP_OFFICES_DATA: string[][] = [
   ['Sr. No.', 'Name of Office / District', 'Officer Name & Designation', 'Contact No. / STD', 'Official Email Address'],
@@ -72,9 +65,6 @@ export const VERIFIED_EMP_OFFICES_DATA: string[][] = [
   ['18', 'Divisional Employment Office, Udaipur', 'Dy. Director (Emp.)', '0294-2415620', 'deo.udaipur@rajasthan.gov.in'],
 ];
 
-/**
- * 100% Exact Verified Data for Format 1: Adobe Scan Govt Order
- */
 export const VERIFIED_ADOBE_SCAN_TEXT = `कार्यालय उत्कृष्ट उच्चतर माध्यमिक विद्यालय पाटी विकासखण्ड पाटी जिला बड़वानी
 
 नस्ती क.                                          अधिकारी का नाम - श्रीमती मनीषा डावर
@@ -94,9 +84,6 @@ export const VERIFIED_ADOBE_SCAN_TEXT = `कार्यालय उत्क�
 
 शाखा प्रभारी                                                                      प्राचार्य,`;
 
-/**
- * 100% Exact Verified Data for Format 2: New Doc Official Memo
- */
 export const VERIFIED_NEW_DOC_TEXT = `कार्यालय मुख्य कार्यपालन अधिकारी एवं जिला पंचायत
 क्रमांक: जि.पं./स्थापना/2025/प्र-1420                                    दिनांक: 25-12-2025
 
@@ -123,73 +110,34 @@ export function repairDevanagariText(input: string): string {
   if (!input) return '';
   let output = input;
 
-  // Apply lexicon repairs
   Object.entries(DEVANAGARI_REPAIR_MAP).forEach(([wrong, right]) => {
     const reg = new RegExp(wrong, 'g');
     output = output.replace(reg, right);
   });
 
-  // Clean redundant pipes or OCR garbage characters
-  output = output
+  return output
     .replace(/[—_]{3,}/g, '--------------------------------')
     .replace(/(\n\s*){3,}/g, '\n\n')
-    .replace(/[ \t]{2,}/g, ' ');
-
-  return output.trim();
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
 }
 
-/**
- * Detects if a line or segment represents a table row
- */
 export function isTableRow(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
   if (trimmed.includes('|') || trimmed.includes('\t')) return true;
-  
-  // Multiple distinct columnar spaces
   const parts = trimmed.split(/\s{3,}/).filter(Boolean);
   return parts.length >= 2;
 }
 
 /**
- * Intelligent Universal Document Processor:
- * Analyzes structure, reconstructs tables, and standardizes layout.
+ * Process document text extracted from real user files:
+ * Cleans OCR artifacts and identifies table rows and document headings.
  */
-export function processDocumentIntelligently(rawContent: string, fileName?: string): ProcessedDocumentResult {
-  const fileLower = (fileName || '').toLowerCase();
-
-  // Instant 100% match check for attached templates
-  if (fileLower.includes('emp') || fileLower.includes('office') || rawContent.includes('Directorate of Employment') || rawContent.includes('Employment Office')) {
-    const textRows = VERIFIED_EMP_OFFICES_DATA.map(r => r.join(' | ')).join('\n');
-    return {
-      docType: 'office-list',
-      formattedText: textRows,
-      gridMatrix: VERIFIED_EMP_OFFICES_DATA,
-      hasTable: true,
-      wordCount: textRows.split(/\s+/).length,
-    };
-  }
-
-  if (fileLower.includes('adobe') || fileLower.includes('scan') || rawContent.includes('मनीषा डावर') || rawContent.includes('बड़वानी')) {
-    return {
-      docType: 'letter',
-      formattedText: VERIFIED_ADOBE_SCAN_TEXT,
-      gridMatrix: [],
-      hasTable: false,
-      wordCount: VERIFIED_ADOBE_SCAN_TEXT.split(/\s+/).length,
-    };
-  }
-
-  if (fileLower.includes('new doc') || rawContent.includes('जिला पंचायत') || rawContent.includes('समीक्षा बैठक')) {
-    return {
-      docType: 'report',
-      formattedText: VERIFIED_NEW_DOC_TEXT,
-      gridMatrix: [],
-      hasTable: false,
-      wordCount: VERIFIED_NEW_DOC_TEXT.split(/\s+/).length,
-    };
-  }
-
+export function processDocumentIntelligently(
+  rawContent: string,
+  fileName?: string
+): ProcessedDocumentResult {
   const repaired = repairDevanagariText(rawContent || '');
   const lines = repaired.split('\n');
 
@@ -198,12 +146,11 @@ export function processDocumentIntelligently(rawContent: string, fileName?: stri
   let hasGovtHeader = false;
   const gridMatrix: string[][] = [];
 
-  // Analyze lines
-  lines.forEach(line => {
+  lines.forEach((line) => {
     const tr = line.trim();
     if (isTableRow(line)) {
       tableRowCount++;
-      const cells = line.split(/[\t|]/).map(c => c.trim()).filter(Boolean);
+      const cells = line.split(/[\t|]|\s{3,}/).map((c) => c.trim()).filter(Boolean);
       if (cells.length >= 2) {
         gridMatrix.push(cells);
       }
@@ -216,7 +163,7 @@ export function processDocumentIntelligently(rawContent: string, fileName?: stri
     }
   });
 
-  const totalNonEmptyLines = lines.filter(l => l.trim()).length;
+  const totalNonEmptyLines = lines.filter((l) => l.trim()).length;
   const isTableDoc = tableRowCount >= 2 || (totalNonEmptyLines > 0 && tableRowCount / totalNonEmptyLines > 0.4);
 
   let docType: 'table' | 'letter' | 'slogans' | 'report' | 'office-list' | 'general' = 'general';
@@ -229,23 +176,19 @@ export function processDocumentIntelligently(rawContent: string, fileName?: stri
     docType = 'letter';
   }
 
-  // Format final document text with proper spatial alignment
-  const formattedLines = lines.map(line => {
+  const formattedLines = lines.map((line) => {
     const tr = line.trim();
     if (!tr) return '';
 
-    // If Slogan/Poem -> enforce centered formatting
     if (docType === 'slogans' || /^(स्लोगन|नारे|स्वतंत्रता दिवस|जय जवान)/i.test(tr)) {
       return `          ${tr}          `;
     }
 
-    // If table row -> normalize delimiters with clean pipes
     if (isTableRow(line)) {
-      const parts = line.split(/[\t|]|\s{3,}/).map(p => p.trim()).filter(Boolean);
+      const parts = line.split(/[\t|]|\s{3,}/).map((p) => p.trim()).filter(Boolean);
       return parts.join(' | ');
     }
 
-    // If metadata (Date/Signature) -> right-align
     if (/^(हस्ताक्षर|भवदीय|दिनांक:|Date:|स्थान:|Place:|प्राचार्य|शाखा प्रभारी|चौकी प्रभारी|मुख्य कार्यपालन अधिकारी)/i.test(tr)) {
       return `                                                  ${tr}`;
     }

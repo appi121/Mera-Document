@@ -14,7 +14,6 @@ import {
   Camera, 
   Copy, 
   Check, 
-  Sparkles, 
   Loader2, 
   Table, 
   FileText, 
@@ -22,8 +21,6 @@ import {
   FileSpreadsheet,
   Plus,
   Trash2,
-  CheckCircle2,
-  FileCheck2,
   Brain,
   ShieldCheck,
   Bot
@@ -43,67 +40,6 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [copied, setCopied] = useState(false);
-
-  // Exact verified letter text from first document
-  const exactGovtLetterText = `कार्यालय उत्कृष्ट उच्चतर माध्यमिक विद्यालय पाटी विकासखण्ड पाटी जिला बड़वानी
-
-नस्ती क.                                          अधिकारी का नाम - श्रीमती मनीषा डावर
-पृष्ठ क्रमांक                                       शाखा प्रभारी का नाम - 
-                                                 शाखा -           व्या.शिक्षा राशि
-
-विषय - वार्षिक अनुदान से शाला की सामग्री क्रय करने हेतु राशि का भुगतान करने बाबद्।
-
-महोदय,
-
-        अपर संचालक समग्र शिक्षा अभियान (से.एजु) पत्र क / SSA / व्यावसायिक शिक्षा / निर्देश / भोपाल दिनांक 26 / 04 / 2025 / का अवलोकन होवे वार्षिक अनुदान से शाला की उपयोगी सामाग्री क्रय कर राशि का भुगतान किया गया।। जिसकी राशि 25000 / अक्षरी पच्चीस हजार मात्र है।
-
-        अतः समस्त भुगतान हेतु अवलाकनार्थ, अनमोदनाथ, हस्ताक्षरार्थ सादर प्रस्तुत है।
-
-
-
-
-शाखा प्रभारी                                                                      प्राचार्य,`;
-
-  // Exact verified 6-column table matrix from Madhya Pradesh Gazette (6 Dec 2024, Page 1703)
-  const exactGazetteTableGrid: string[][] = [
-    ['(1) अनुक्रमांक', '(2) उस पद का नाम जिससे पदोन्नति की जानी है', '(3) उस पद का नाम जिस पर पदोन्नति की जानी है', '(4) पद के लिए अनुभव', '(5) विभागीय पदोन्नति समिति के सदस्य', '(6) अभ्युक्तियां'],
-    ['1.', 'उच्च माध्यमिक शिक्षक', 'प्राचार्य हाईस्कूल/उप प्राचार्य', '05 वर्ष', '(1) आयुक्त, जनजातीय कार्य - अध्यक्ष\n(2) अपर आयुक्त, जनजातीय कार्य - सदस्य\n(3) अपर संचालक/उपआयुक्त जनजातीय कार्य - सदस्य\n(4) सहायक आयुक्त/ सहायक संचालक, जनजातीय कार्य- सदस्य सचिव', ''],
-    ['2.', '1. माध्यमिक शिक्षक\n2. प्रधानाध्यापक (माध्यमिक शाला)', 'उच्च माध्यमिक शिक्षक', '05 वर्ष', '(1) आयुक्त, जनजातीय कार्य - अध्यक्ष\n(2) अपर आयुक्त, जनजातीय कार्य - सदस्य\n(3) अपर संचालक/उपआयुक्त जनजातीय कार्य - सदस्य\n(4) सहायक आयुक्त/ सहायक संचालक, जनजातीय कार्य- सदस्य सचिव', 'संबंधित विषय में स्नातकोत्तर उपाधि धारित करने वाले माध्यमिक शिक्षक एवं प्रधान अध्यापक को उच्च माध्यमिक शिक्षक के पद पर पदोन्नत किया जाएगा।'],
-    ['3.', 'माध्यमिक शिक्षक खेल', 'कोच', '05 वर्ष', '(1) आयुक्त, जनजातीय कार्य - अध्यक्ष\n(2) अपर आयुक्त, जनजातीय कार्य - सदस्य\n(3) अपर संचालक/उपआयुक्त जनजातीय कार्य - सदस्य\n(4) सहायक आयुक्त/ सहायक संचालक जनजातीय कार्य- सदस्य सचिव', 'एम.पी.एड./न्यूनतम एक वर्षीय एन.आई.एस.प्रशिक्षण प्राप्त माध्यमिक शिक्षक खेल को कोच के पद पर पदोन्नत किया जाएगा'],
-    ['4.', 'माध्यमिक शिक्षक', 'प्रधानाध्यापक (माध्यमिक शाला)', '05 वर्ष', '(1) संभागीय उपायुक्त, जनजातीय कार्य - अध्यक्ष\n(2) सहायक आयुक्त/जिला संयोजक जनजातीय कार्य - सदस्य\n(3) प्राचार्य हायर सेकंडरी स्कूल - सदस्य\n(4) सहायक संचालक - सदस्य सचिव', '']
-  ];
-
-  const exactGazetteText = `भाग 4 (ग) ]                      मध्यप्रदेश राजपत्र, दिनांक 6 दिसम्बर 2024                      1703
-
-                                        अनुसूची-चार
-                                  (नियम 15 और 16 देखिए)
-                             पदोन्नति समिति (शैक्षणिक संवर्ग)
-
-(1) अनुक्रमांक | (2) उस पद का नाम जिससे पदोन्नति की जानी है | (3) उस पद का नाम जिस पर पदोन्नति की जानी है | (4) पद के लिए अनुभव | (5) विभागीय पदोन्नति समिति के सदस्य | (6) अभ्युक्तियां
-
-1. | उच्च माध्यमिक शिक्षक | प्राचार्य हाईस्कूल/उप प्राचार्य | 05 वर्ष | (1) आयुक्त, जनजातीय कार्य - अध्यक्ष\n(2) अपर आयुक्त, जनजातीय कार्य - सदस्य\n(3) अपर संचालक/उपआयुक्त जनजातीय कार्य - सदस्य\n(4) सहायक आयुक्त/ सहायक संचालक, जनजातीय कार्य- सदस्य सचिव | 
-
-2. | 1. माध्यमिक शिक्षक\n2. प्रधानाध्यापक (माध्यमिक शाला) | उच्च माध्यमिक शिक्षक | 05 वर्ष | (1) आयुक्त, जनजातीय कार्य - अध्यक्ष\n(2) अपर आयुक्त, जनजातीय कार्य - सदस्य\n(3) अपर संचालक/उपआयुक्त जनजातीय कार्य - सदस्य\n(4) सहायक आयुक्त/ सहायक संचालक, जनजातीय कार्य- सदस्य सचिव | संबंधित विषय में स्नातकोत्तर उपाधि धारित करने वाले माध्यमिक शिक्षक एवं प्रधान अध्यापक को उच्च माध्यमिक शिक्षक के पद पर पदोन्नत किया जाएगा।
-
-3. | माध्यमिक शिक्षक खेल | कोच | 05 वर्ष | (1) आयुक्त, जनजातीय कार्य - अध्यक्ष\n(2) अपर आयुक्त, जनजातीय कार्य - सदस्य\n(3) अपर संचालक/उपआयुक्त जनजातीय कार्य - सदस्य\n(4) सहायक आयुक्त/ सहायक संचालक जनजातीय कार्य- सदस्य सचिव | एम.पी.एड./न्यूनतम एक वर्षीय एन.आई.एस.प्रशिक्षण प्राप्त माध्यमिक शिक्षक खेल को कोच के पद पर पदोन्नत किया जाएगा
-
-4. | माध्यमिक शिक्षक | प्रधानाध्यापक (माध्यमिक शाला) | 05 वर्ष | (1) संभागीय उपायुक्त, जनजातीय कार्य - अध्यक्ष\n(2) सहायक आयुक्त/जिला संयोजक जनजातीय कार्य - सदस्य\n(3) प्राचार्य हायर सेकंडरी स्कूल - सदस्य\n(4) सहायक संचालक - सदस्य सचिव | `;
-
-  const loadVerifiedGovtLetter = () => {
-    setFile(null);
-    setPreviewUrl('/uploads/govt_letter_photo.jpeg');
-    setExtractedText(exactGovtLetterText);
-    setStructuredTableData([]);
-    showSuccess(lang === 'hi' ? '100% सटीक शासकीय पत्र डाटा लोड हुआ!' : 'Loaded 100% Exact Govt Letter!');
-  };
-
-  const loadVerifiedGazetteTable = () => {
-    setFile(null);
-    setPreviewUrl('/uploads/mp_gazette_table_photo.jpeg');
-    setExtractedText(exactGazetteText);
-    setStructuredTableData(exactGazetteTableGrid);
-    showSuccess(lang === 'hi' ? '100% सटीक राजपत्र तालिका (6 Columns) लोड हुई!' : 'Loaded 100% Exact Gazette Table Grid!');
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -126,22 +62,11 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       return;
     }
 
-    if (!file && previewUrl?.includes('govt_letter_photo')) {
-      loadVerifiedGovtLetter();
-      return;
-    }
-
-    if (!file && previewUrl?.includes('mp_gazette_table')) {
-      loadVerifiedGazetteTable();
-      return;
-    }
-
     setLoading(true);
     setStatusText(lang === 'hi' ? 'फोटो का कंट्रास्ट व रिज़ॉल्यूशन बढ़ाया जा रहा है...' : 'Enhancing image quality...');
 
     try {
       const targetSource = file ? URL.createObjectURL(file) : previewUrl || '';
-      
       const enhancedImageDataUrl = await preprocessImageForOcr(targetSource);
 
       setStatusText(lang === 'hi' ? 'AI भाषा मॉडल (हिंदी + इंग्लिश) चालू हो रहा है...' : 'Initializing OCR Engine...');
@@ -169,18 +94,18 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       if (result.formattedText.trim()) {
         setExtractedText(result.formattedText);
         setStructuredTableData(result.gridMatrix);
-        showSuccess(lang === 'hi' ? 'फोटो से डाटा और लेआउट सफलतापूर्वक एक्सट्रेक्ट हो गया!' : 'Text and layout extracted successfully!');
+        showSuccess(lang === 'hi' ? 'फोटो से टेक्स्ट सफलतापूर्वक निकल गया!' : 'Text extracted successfully!');
       } else {
         setExtractedText(
           lang === 'hi' 
-            ? 'फोटो में साफ़ टेक्स्ट नहीं मिल सका। कृपया साफ़ और स्पष्ट फोटो अपलोड करें।' 
+            ? 'फोटो में साफ़ टेक्स्ट नहीं मिल सका। कृपया स्पष्ट फोटो अपलोड करें।' 
             : 'No clear text detected in the photo.'
         );
         showError(lang === 'hi' ? 'साफ़ टेक्स्ट नहीं मिला!' : 'No clear text found!');
       }
     } catch (err) {
       console.error('OCR Error:', err);
-      showError(lang === 'hi' ? 'OCR स्कैनिंग में त्रुटि हुई। कृपया दोबारा प्रयास करें।' : 'Failed to scan image. Please try again.');
+      showError(lang === 'hi' ? 'OCR स्कैनिंग में त्रुटि हुई।' : 'Failed to scan image.');
     } finally {
       setLoading(false);
       setStatusText('');
@@ -216,20 +141,19 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     if (!extractedText) return;
     navigator.clipboard.writeText(extractedText);
     setCopied(true);
-    showSuccess(lang === 'hi' ? 'साफ़ टेक्स्ट कॉपी हो गया!' : 'Clean text copied!');
+    showSuccess(lang === 'hi' ? 'टेक्स्ट कॉपी हो गया!' : 'Text copied!');
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadWord = () => {
+  const handleDownloadWord = async () => {
     if (!extractedText) return;
-    downloadWordDoc(`Gazette_Table_${Date.now()}.doc`, extractedText, 'MP Gazette Document');
-    showSuccess(lang === 'hi' ? 'MS Word (.doc) फ़ाइल डाउनलोड हुई!' : 'Word Document downloaded!');
+    await downloadWordDoc(`OCR_Document_${Date.now()}.docx`, extractedText, 'OCR Extracted Document', structuredTableData);
+    showSuccess(lang === 'hi' ? 'MS Word (.docx) फ़ाइल डाउनलोड हुई!' : 'Word (.docx) downloaded!');
   };
 
   const handleDownloadExcel = () => {
     if (structuredTableData.length === 0) {
-      downloadWordDoc(`Gazette_Table_${Date.now()}.doc`, extractedText, 'MP Gazette Document');
-      showSuccess(lang === 'hi' ? 'MS Word (.doc) फ़ाइल डाउनलोड हुई!' : 'Word Document downloaded!');
+      handleDownloadWord();
       return;
     }
 
@@ -261,7 +185,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 </html>`;
 
     const blob = new Blob(['\ufeff' + excelDoc], { type: 'application/vnd.ms-excel;charset=utf-8' });
-    downloadFile(blob, `MP_Gazette_Table_${Date.now()}.xls`, 'application/vnd.ms-excel');
+    downloadFile(blob, `OCR_Table_${Date.now()}.xls`, 'application/vnd.ms-excel');
     showSuccess(lang === 'hi' ? 'एक्सेल (.xls) डाउनलोड हुई!' : 'Excel downloaded!');
   };
 
@@ -277,49 +201,22 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <Brain className="w-6 h-6 text-amber-200" />
-              {lang === 'hi' ? 'AI डीप विज़न दस्तावेज़ एवं टेबल स्कैनर' : 'AI Deep Vision Document & Table Scanner'}
+              {lang === 'hi' ? 'AI डीप विज़न OCR स्कैनर (हिंदी + इंग्लिश)' : 'AI Deep Vision OCR Scanner (Hindi + English)'}
             </CardTitle>
 
             <Badge variant="secondary" className="bg-white/20 text-white border-white/40 text-xs px-2.5 py-1 w-fit">
               <ShieldCheck className="w-3.5 h-3.5 mr-1 text-amber-300" />
-              {lang === 'hi' ? '100% भाषा व लेआउट लॉक' : '100% Exact Layout & Language'}
+              Tesseract Neural Engine
             </Badge>
           </div>
           <CardDescription className="text-orange-100 text-sm">
             {lang === 'hi' 
-              ? 'शासकीय आदेश, राजपत्र सारणी व फ़ॉर्म की एक-एक वर्तनी और कॉलम लेआउट बिना बदले वर्ड व एक्सेल में बदलें' 
-              : 'Convert MP Gazette tables & official letters into Word & Excel with 100% exact alignment'}
+              ? 'किसी भी दस्तावेज़, पत्र, मार्कशीट या सारणी की फोटो से सीधे एडिटेबल वर्ड (.docx) व एक्सेल बनाएं' 
+              : 'Extract clean Hindi & English text from photos, papers and scanned documents into Word (.docx) & Excel'}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="p-6 space-y-6">
-          {/* Quick Demo Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-sm">
-              <div className="flex items-center gap-2.5">
-                <FileCheck2 className="w-5 h-5 text-orange-600 shrink-0" />
-                <span className="font-bold text-gray-900 text-xs">
-                  {lang === 'hi' ? '1. शासकीय आदेश पत्र (पाटी बड़वानी)' : '1. Govt Official Letter'}
-                </span>
-              </div>
-              <Button size="sm" onClick={loadVerifiedGovtLetter} className="bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-bold px-3 py-1 rounded-lg shrink-0">
-                {lang === 'hi' ? 'लेटर देखें' : 'View Letter'}
-              </Button>
-            </div>
-
-            <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-sm">
-              <div className="flex items-center gap-2.5">
-                <Table className="w-5 h-5 text-indigo-600 shrink-0" />
-                <span className="font-bold text-gray-900 text-xs">
-                  {lang === 'hi' ? '2. म.प्र. राजपत्र टेबल (6 Columns)' : '2. MP Gazette Table (6 Cols)'}
-                </span>
-              </div>
-              <Button size="sm" onClick={loadVerifiedGazetteTable} className="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-3 py-1 rounded-lg shrink-0">
-                {lang === 'hi' ? 'राजपत्र टेबल देखें' : 'View Gazette Table'}
-              </Button>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Upload Column */}
             <div className="lg:col-span-5 space-y-4">
@@ -346,10 +243,10 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                       <Camera className="w-7 h-7" />
                     </div>
                     <p className="font-bold text-gray-800 text-sm mb-1">
-                      {lang === 'hi' ? 'किसी भी राजपत्र या टेबल की फोटो चुनें' : 'Upload Any Table or Gazette Photo'}
+                      {lang === 'hi' ? 'फोटो या स्कैन दस्तावेज़ चुनें' : 'Upload Document Photo'}
                     </p>
                     <p className="text-xs text-gray-500 max-w-xs">
-                      {lang === 'hi' ? 'राजपत्र पदोन्नति सारणी, सरकारी आदेश या मार्कशीट - 100% सटीक लेआउट' : 'Upload photo of MP Gazette or Marks Table'}
+                      {lang === 'hi' ? 'JPG, PNG, WEBP - हिंदी व इंग्लिश दोनों भाषाओं के लिए' : 'JPG, PNG, WEBP files supported'}
                     </p>
                   </>
                 )}
@@ -362,8 +259,8 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bot className="w-5 h-5" />}
                 {loading 
-                  ? (lang === 'hi' ? 'AI डीप स्कैनिंग जारी है...' : 'AI Deep Scanning...') 
-                  : (lang === 'hi' ? 'AI डीप स्कैनर से परफ़ेक्ट डाटा निकालें' : 'Deep Scan with AI Engine')}
+                  ? (lang === 'hi' ? 'AI OCR स्कैनिंग जारी है...' : 'Scanning Image...') 
+                  : (lang === 'hi' ? 'फोटो से टेक्स्ट निकालें' : 'Extract Text with AI OCR')}
               </Button>
             </div>
 
@@ -374,12 +271,12 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                   <TabsList className="bg-orange-50 border border-orange-200">
                     <TabsTrigger value="text-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
                       <FileText className="w-3.5 h-3.5" />
-                      {lang === 'hi' ? 'डॉक्यूमेंट लेआउट (Word Format)' : 'Document View'}
+                      {lang === 'hi' ? 'डॉक्यूमेंट लेआउट' : 'Document View'}
                     </TabsTrigger>
                     {structuredTableData.length > 0 && (
                       <TabsTrigger value="table-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
                         <Table className="w-3.5 h-3.5" />
-                        {lang === 'hi' ? 'एक्सेल टेबल व्यू (Excel Grid)' : 'Excel Grid View'}
+                        {lang === 'hi' ? 'एक्सेल टेबल ग्रिड' : 'Excel Grid View'}
                       </TabsTrigger>
                     )}
                   </TabsList>
@@ -392,7 +289,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                       </Button>
                       <Button size="sm" onClick={handleDownloadWord} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1 text-xs shadow-md">
                         <Download className="w-3.5 h-3.5" />
-                        Word (.doc)
+                        Word (.docx)
                       </Button>
                       {structuredTableData.length > 0 && (
                         <Button size="sm" onClick={handleDownloadExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs shadow-md">
@@ -409,8 +306,8 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                     rows={13} 
                     value={extractedText} 
                     onChange={(e) => setExtractedText(e.target.value)} 
-                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "AI डीप स्कैनर से परफ़ेक्ट डाटा निकालें" दबाएं...' : 'Upload photo and click deep scan...'}
-                    className="font-serif text-xs sm:text-sm bg-white border-orange-200 focus-visible:ring-orange-500 h-[360px] p-4 leading-relaxed whitespace-pre font-medium shadow-inner" 
+                    placeholder={lang === 'hi' ? 'फोटो अपलोड करके "फोटो से टेक्स्ट निकालें" दबाएं...' : 'Upload photo and click extract...'}
+                    className="font-sans text-xs sm:text-sm bg-white border-orange-200 focus-visible:ring-orange-500 h-[360px] p-4 leading-relaxed whitespace-pre font-medium shadow-inner" 
                   />
                 </TabsContent>
 
@@ -425,7 +322,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                                 {row.map((cell, cIdx) => (
                                   <td key={cIdx} className="border border-slate-300 p-2 vertical-top">
                                     <textarea
-                                      rows={cIdx === 4 || cIdx === 5 ? 4 : 2}
+                                      rows={2}
                                       value={cell}
                                       onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
                                       className={`w-full bg-transparent px-1.5 py-1 text-xs font-medium focus:outline-none focus:bg-orange-100 rounded resize-y ${rIdx === 0 ? 'text-white placeholder-white/80 font-bold' : 'text-slate-800'}`}

@@ -3,6 +3,7 @@ import { createWorker } from 'tesseract.js';
 import { formatOcrDataWithLayout } from './ocrFormatter';
 import { preprocessImageForOcr } from './imagePreprocess';
 import { generatePdfFromContent } from './wordToPdf';
+import { createRealDocxBlob } from './docxGenerator';
 
 // Set worker source for PDF.js using cdnjs
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
@@ -24,104 +25,28 @@ export const downloadFile = (content: string | Blob, filename: string, mimeType:
 };
 
 /**
- * Generates an Adobe / ChatGPT grade MS Word compatible document with UTF-8 BOM encoding.
- * Strictly preserves center alignment, poem/slogan stanza line breaks, bold headers, 
- * serial numbers (1., 2.), tables and Hindi Devanagari typography.
+ * Generates and downloads a REAL Microsoft Word .docx binary file using the docx library.
+ * Preserves Devanagari Hindi Unicode, headings, paragraphs, and tables.
  */
-export const downloadWordDoc = (filename: string, textContent: string, title: string = 'Document') => {
-  const lines = textContent.split('\n');
-
-  const formattedHtml = lines
-    .map(line => {
-      const lineTrimmed = line.trim();
-      if (!lineTrimmed) {
-        return '<p style="margin: 0; line-height: 1.0; font-size: 8pt;">&nbsp;</p>';
-      }
-
-      // Check if it's a table row (contains multiple column delimiters)
-      if (line.includes('|') || line.includes('\t')) {
-        const cells = line.split(/[\t|]/).map(c => `<td style="border:1px solid #94a3b8; padding:8px 12px; font-family:'Mangal', 'Noto Sans Devanagari', 'Calibri', sans-serif; font-size: 11pt; vertical-align: top;">${c.trim()}</td>`).join('');
-        return `<table style="border-collapse:collapse; width:100%; margin: 10pt 0; border: 1px solid #94a3b8;"><tr>${cells}</tr></table>`;
-      }
-
-      // Detect center alignment in Indian documents (Headings, Slogans, Quotes, Titles)
-      const leadingSpaces = line.length - line.trimStart().length;
-      const isCenter = (
-        leadingSpaces >= 10 ||
-        /^(स्लोगन|नारे|स्वतंत्रता दिवस|कार्यालय|शासकीय|प्रमाण पत्र|शपथ पत्र|अनुसूची|रिपोर्ट|चौकी|थाना|RESUME|BIODATA|CURRICULUM|EXPERIENCE|SALARY|RENT|AFFIDAVIT|DECLARATION)/i.test(lineTrimmed) ||
-        (lineTrimmed.startsWith('"') && lineTrimmed.endsWith('"')) ||
-        (lineTrimmed.startsWith('“') && lineTrimmed.endsWith('”')) ||
-        lineTrimmed.startsWith('---') ||
-        lineTrimmed.startsWith('===')
-      );
-
-      // Detect numbered list or bullet (1., 2., •, -, आदि)
-      const isNumbered = /^([0-9]+[.)]|[-•*]|\([0-9]+\))\s+/i.test(lineTrimmed);
-
-      // Detect Right-aligned metadata (dates, signatures)
-      const isRightAligned = (
-        leadingSpaces >= 30 ||
-        /^(हस्ताक्षर|भवदीय|दिनांक:|Date:|स्थान:|Place:|प्राचार्य|अधीक्षक|शाखा प्रभारी|थाना प्रभारी|चौकी प्रभारी)/i.test(lineTrimmed)
-      );
-
-      let textAlign = 'left';
-      let fontWeight = 'normal';
-      let fontSize = '11.5pt';
-      let color = '#1e293b';
-
-      if (isCenter) {
-        textAlign = 'center';
-        fontWeight = 'bold';
-        fontSize = '12.5pt';
-        color = '#0f172a';
-      } else if (isRightAligned) {
-        textAlign = 'right';
-      } else if (isNumbered) {
-        fontWeight = 'normal';
-      }
-
-      return `<p style="margin: 0 0 6pt 0; line-height: 1.55; font-family:'Mangal', 'Noto Sans Devanagari', 'Calibri', 'Segoe UI', Arial, sans-serif; font-size:${fontSize}; text-align:${textAlign}; font-weight:${fontWeight}; color:${color}; word-break: break-word;">${lineTrimmed}</p>`;
-    })
-    .join('');
-
-  const htmlDoc = `<!DOCTYPE html>
-<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-<head>
-  <meta charset="utf-8">
-  <title>${title}</title>
-  <!--[if gte mso 9]>
-  <xml>
-    <w:WordDocument>
-      <w:View>Print</w:View>
-      <w:Zoom>100</w:Zoom>
-      <w:DoNotOptimizeForBrowser/>
-    </w:WordDocument>
-  </xml>
-  <![endif]-->
-  <style>
-    @page Section1 {
-      size: 595.3pt 841.9pt; /* A4 */
-      margin: 54.0pt 54.0pt 54.0pt 54.0pt;
-      mso-header-margin: 35.4pt;
-      mso-footer-margin: 35.4pt;
-      mso-paper-source: 0;
-    }
-    div.Section1 { page: Section1; }
-    body {
-      font-family: 'Mangal', 'Noto Sans Devanagari', 'Calibri', 'Segoe UI', Arial, sans-serif;
-    }
-    p { margin: 0 0 6pt 0; }
-  </style>
-</head>
-<body style="font-family:'Mangal', 'Noto Sans Devanagari', 'Calibri', 'Segoe UI', Arial, sans-serif; padding: 20px;">
-  <div class="Section1">
-    ${formattedHtml}
-  </div>
-</body>
-</html>`;
-
-  const blob = new Blob(['\ufeff' + htmlDoc], { type: 'application/msword;charset=utf-8' });
-  downloadFile(blob, filename.endsWith('.doc') ? filename : `${filename}.doc`, 'application/msword');
+export const downloadWordDoc = async (
+  filename: string,
+  textContent: string,
+  title: string = 'Document',
+  gridMatrix?: string[][]
+) => {
+  try {
+    const safeDocxName = filename.replace(/\.doc$/i, '') + '.docx';
+    const docxBlob = await createRealDocxBlob(textContent, gridMatrix, title);
+    downloadFile(
+      docxBlob,
+      safeDocxName,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+  } catch (err) {
+    console.error('Failed to generate DOCX:', err);
+    // Fallback plain text download if DOCX generation encounters an error
+    downloadFile(textContent, filename.replace(/\.docx?$/i, '.txt'), 'text/plain;charset=utf-8');
+  }
 };
 
 /**
@@ -159,9 +84,9 @@ interface PdfTextItem {
 }
 
 /**
- * Deep Vision PDF Text & Scanned Table Extractor:
- * If the PDF is pure vector text -> extracts precise spatial coordinates.
- * If the PDF is a scanned document (like Bhagsur Police / Govt records) -> uses neural OCR with Devanagari preprocessing.
+ * Real PDF Text & Scanned OCR Extractor:
+ * 1. Checks if PDF contains vector text with spatial layout.
+ * 2. If scanned or photo PDF -> runs neural Tesseract.js (Hindi + English) with preprocessed contrast.
  */
 export const extractPdfContentAccurate = async (
   file: File, 
@@ -252,9 +177,9 @@ export const extractPdfContentAccurate = async (
 
     const directExtracted = pageOutputs.join('\n\n').trim();
 
-    // If scanned document (like Bhagsur choki report), run Deep OCR engine
+    // If scanned document, run real Tesseract OCR
     if (isScannedPdf || !directExtracted || directExtracted.length < 30) {
-      if (onProgress) onProgress('स्कैन/फोटो PDF पाई गई! AI डीप OCR (हिंदी + टेबल) स्कैनिंग शुरू हो रही है...');
+      if (onProgress) onProgress('स्कैन/फोटो PDF: AI डीप OCR (हिंदी + इंग्लिश) स्कैनिंग जारी है...');
       
       let ocrText = '';
       const worker = await createWorker(['hin', 'eng'], 1, {
@@ -271,11 +196,10 @@ export const extractPdfContentAccurate = async (
       });
 
       for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
-        if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का अक्षर व टेबल स्कैन किया जा रहा है...`);
+        if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का OCR स्कैन किया जा रहा है...`);
         const page = await pdf.getPage(i);
         const rawCanvasDataUrl = await renderPdfPageToCanvas(page);
         
-        // Enhance scan clarity before OCR
         const preprocessedDataUrl = await preprocessImageForOcr(rawCanvasDataUrl);
 
         if (preprocessedDataUrl) {

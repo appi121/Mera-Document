@@ -19,7 +19,8 @@ import {
   addPageNumbersToPdf,
   addWatermarkToPdf,
   convertImagesToPdf,
-  convertPdfToJpgImages
+  convertPdfToJpgImages,
+  compressPdfFile,
 } from '@/utils/pdfOperations';
 import { FileUp, ArrowLeft, ShieldCheck, Brain, ScanText } from 'lucide-react';
 
@@ -81,19 +82,19 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     if (formatId === 'adobe-scan') {
       setExtractedText(VERIFIED_ADOBE_SCAN_TEXT);
       setTableGrid([]);
-      showSuccess(lang === 'hi' ? 'शासकीय आदेश पत्र (Format 1) 100% शुद्धता से लोड हुआ!' : 'Loaded Format 1 (Govt Official Order)!');
+      showSuccess(lang === 'hi' ? 'शासकीय आदेश पत्र प्रारूप लोड हुआ!' : 'Loaded Govt Official Order template!');
     } else if (formatId === 'new-doc') {
       setExtractedText(VERIFIED_NEW_DOC_TEXT);
       setTableGrid([]);
-      showSuccess(lang === 'hi' ? 'कार्यालयीन ज्ञापन (Format 2) 100% शुद्धता से लोड हुआ!' : 'Loaded Format 2 (Office Memo)!');
+      showSuccess(lang === 'hi' ? 'कार्यालयीन ज्ञापन प्रारूप लोड हुआ!' : 'Loaded Office Memo template!');
     } else if (formatId === 'emp-list') {
-      const textRows = VERIFIED_EMP_OFFICES_DATA.map(r => r.join(' | ')).join('\n');
+      const textRows = VERIFIED_EMP_OFFICES_DATA.map((r) => r.join(' | ')).join('\n');
       setExtractedText(textRows);
       setTableGrid(VERIFIED_EMP_OFFICES_DATA);
       if (activeSubTab !== 'pdf-to-excel' && activeSubTab !== 'pdf-to-word') {
         setActiveSubTab('pdf-to-excel');
       }
-      showSuccess(lang === 'hi' ? 'रोजगार कार्यालय तालिका (Format 3: Excel Grid) लोड हुई!' : 'Loaded Format 3 (Employment Directory Grid)!');
+      showSuccess(lang === 'hi' ? 'रोजगार कार्यालय तालिका लोड हुई!' : 'Loaded Employment Directory Grid template!');
     }
   };
 
@@ -113,19 +114,28 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
 
       if (activeSubTab === 'pdf-to-word' || activeSubTab === 'pdf-to-excel') {
         setProcessing(true);
-        const rawText = await extractPdfContentAccurate(firstFile, (status) => {
-          setProgressStatus(status);
-        });
+        try {
+          const rawText = await extractPdfContentAccurate(firstFile, (status) => {
+            setProgressStatus(status);
+          });
 
-        const smartResult = processDocumentIntelligently(rawText, firstFile.name);
-        setExtractedText(smartResult.formattedText);
-        setTableGrid(smartResult.gridMatrix || []);
-        setIsAiOptimized(true);
-        setProcessing(false);
-        setCompleted(true);
+          if (!rawText.trim()) {
+            showError(lang === 'hi' ? 'PDF से टेक्स्ट नहीं पढ़ा जा सका।' : 'Could not extract text from PDF.');
+            return;
+          }
 
-        if (smartResult.formattedText) {
-          showSuccess(lang === 'hi' ? 'AI इंजन ने 100% शुद्ध लेआउट तैयार कर दिया!' : 'Extracted with 100% accuracy!');
+          const smartResult = processDocumentIntelligently(rawText, firstFile.name);
+          setExtractedText(smartResult.formattedText);
+          setTableGrid(smartResult.gridMatrix || []);
+          setIsAiOptimized(true);
+          setCompleted(true);
+          showSuccess(lang === 'hi' ? 'PDF सामग्री सफलतापूर्वक पढ़ी गई!' : 'PDF contents parsed successfully!');
+        } catch (err: any) {
+          console.error(err);
+          showError(err.message || (lang === 'hi' ? 'PDF पढ़ने में त्रुटि हुई' : 'Failed to read PDF'));
+        } finally {
+          setProcessing(false);
+          setProgressStatus('');
         }
       } else if (activeSubTab === 'word-to-pdf' && firstFile) {
         setProcessing(true);
@@ -137,11 +147,14 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
           setExtractedText(smartResult.formattedText || text || firstFile.name);
           setTableGrid(smartResult.gridMatrix || []);
           setIsAiOptimized(true);
-          setProcessing(false);
           setCompleted(true);
-        } catch (err) {
+          showSuccess(lang === 'hi' ? 'DOCX फ़ाइल सफलतापूर्वक लोड हुई!' : 'DOCX file loaded!');
+        } catch (err: any) {
           console.error(err);
+          showError(err.message || (lang === 'hi' ? 'Word फ़ाइल लोड नहीं हो सकी' : 'Failed to parse DOCX'));
+        } finally {
           setProcessing(false);
+          setProgressStatus('');
         }
       }
     }
@@ -204,10 +217,26 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         showSuccess(lang === 'hi' ? 'JPG फोटोज तैयार हैं!' : 'PDF converted to JPG images!');
       } else if (activeSubTab === 'compress' && files[0]) {
         setProgressStatus(lang === 'hi' ? 'PDF कंप्रेस की जा रही है...' : 'Compressing PDF...');
-        const rotBlob = await rotatePdfFile(files[0], 0);
-        setGeneratedBlob(rotBlob);
+        const result = await compressPdfFile(files[0], (msg) => setProgressStatus(msg));
+        setGeneratedBlob(result.blob);
         setCompleted(true);
-        showSuccess(lang === 'hi' ? 'PDF कंप्रेस हो गई!' : 'PDF compressed!');
+
+        const origKb = Math.round(result.originalSize / 1024);
+        const compKb = Math.round(result.compressedSize / 1024);
+
+        if (result.isReduced) {
+          showSuccess(
+            lang === 'hi'
+              ? `PDF का साइज ${origKb} KB से घटकर ${compKb} KB (${result.reductionPercentage}% कम) हो गया!`
+              : `Reduced from ${origKb} KB to ${compKb} KB (${result.reductionPercentage}% saved)!`
+          );
+        } else {
+          showSuccess(
+            lang === 'hi'
+              ? `फ़ाइल पहले से अत्यधिक कंप्रेस्ड थी (${compKb} KB)।`
+              : `File was already highly compressed (${compKb} KB).`
+          );
+        }
       } else if ((activeSubTab === 'pdf-to-word' || activeSubTab === 'pdf-to-excel') && files[0]) {
         const rawText = await extractPdfContentAccurate(files[0], (status) => {
           setProgressStatus(status);
@@ -217,14 +246,14 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         setTableGrid(smartResult.gridMatrix || []);
         setIsAiOptimized(true);
         setCompleted(true);
-        showSuccess(lang === 'hi' ? 'दस्तावेज़ तैयार है!' : 'Document converted!');
+        showSuccess(lang === 'hi' ? 'दस्तावेज़ तैयार है!' : 'Document ready!');
       } else {
         setCompleted(true);
         showSuccess(lang === 'hi' ? 'कार्य पूर्ण हुआ!' : 'Done!');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showError(lang === 'hi' ? 'ऑपरेशन पूरा नहीं हो सका' : 'Operation failed');
+      showError(err.message || (lang === 'hi' ? 'ऑपरेशन पूरा नहीं हो सका' : 'Operation failed'));
     } finally {
       setProcessing(false);
       setProgressStatus('');
@@ -258,10 +287,10 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
       const pdfBlob = await generateAccuratePdfFromHtml(baseName, contentToUse, `${baseName}.pdf`);
 
       downloadFile(pdfBlob, `${baseName}_converted.pdf`, 'application/pdf');
-      showSuccess(lang === 'hi' ? '100% शुद्ध PDF डाउनलोड हो गई!' : 'Clean PDF with intact Hindi fonts downloaded!');
-    } catch (err) {
+      showSuccess(lang === 'hi' ? 'PDF डाउनलोड हो गई!' : 'PDF downloaded!');
+    } catch (err: any) {
       console.error(err);
-      showError(lang === 'hi' ? 'PDF डाउनलोड में समस्या आई' : 'Failed to generate PDF');
+      showError(err.message || (lang === 'hi' ? 'PDF डाउनलोड में समस्या आई' : 'Failed to generate PDF'));
     } finally {
       setProcessing(false);
       setProgressStatus('');
@@ -274,16 +303,28 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
       return;
     }
 
-    const originalName = files[0]?.name || 'Employment_Offices_Table';
+    const originalName = files[0]?.name || 'Data_Table';
     const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
 
     const smart = processDocumentIntelligently(extractedText, originalName);
-    const rows = (tableGrid.length > 0) ? tableGrid : (smart.gridMatrix.length > 0 ? smart.gridMatrix : VERIFIED_EMP_OFFICES_DATA);
+    const rows = tableGrid.length > 0 ? tableGrid : smart.gridMatrix;
+
+    if (rows.length === 0) {
+      handleDownloadWord();
+      return;
+    }
 
     const rowsHtml = rows
       .map((row, idx) => {
         const isHeader = idx === 0;
-        const cells = row.map(c => `<td style="border:1px solid #94a3b8; padding:8px 12px; font-family:Calibri,sans-serif; mso-number-format:'\\@'; ${isHeader ? 'background-color:#ea580c; color:#fff; font-weight:bold;' : ''}">${c}</td>`).join('');
+        const cells = row
+          .map(
+            (c) =>
+              `<td style="border:1px solid #94a3b8; padding:8px 12px; font-family:Calibri,sans-serif; mso-number-format:'\\@'; ${
+                isHeader ? 'background-color:#ea580c; color:#fff; font-weight:bold;' : ''
+              }">${c}</td>`
+          )
+          .join('');
         return `<tr>${cells}</tr>`;
       })
       .join('');
@@ -297,7 +338,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     showSuccess(lang === 'hi' ? 'MS Excel (.xls) डाउनलोड हुई!' : 'Excel file downloaded!');
   };
 
-  const handleDownloadWord = () => {
+  const handleDownloadWord = async () => {
     const originalName = files[0]?.name || 'document';
     const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
 
@@ -305,8 +346,9 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
       showError(lang === 'hi' ? 'कोई डाटा नहीं मिला' : 'No text found');
       return;
     }
-    downloadWordDoc(`${baseName}_converted.doc`, extractedText, baseName);
-    showSuccess(lang === 'hi' ? 'MS Word (.doc) डाउनलोड हो रही है!' : 'Word file downloading!');
+
+    await downloadWordDoc(`${baseName}_converted.docx`, extractedText, baseName, tableGrid);
+    showSuccess(lang === 'hi' ? 'असली MS Word (.docx) डाउनलोड हो गई!' : 'Real Word (.docx) downloaded!');
   };
 
   const handleCopyText = () => {
@@ -317,7 +359,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const currentTab = PDF_TOOL_TABS.find(t => t.id === activeSubTab) || PDF_TOOL_TABS[0];
+  const currentTab = PDF_TOOL_TABS.find((t) => t.id === activeSubTab) || PDF_TOOL_TABS[0];
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -331,7 +373,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <Brain className="w-6 h-6 text-amber-200" />
-              {lang === 'hi' ? 'iLovePDF स्टाइल ऑल-इन-वन PDF सुइट' : 'Complete All-in-One PDF Suite'}
+              {lang === 'hi' ? 'ऑल-इन-वन PDF सुइट' : 'Complete All-in-One PDF Suite'}
             </CardTitle>
             <Badge variant="secondary" className="bg-white/20 text-white border-white/40 text-xs px-2.5 py-1 w-fit">
               <ShieldCheck className="w-3.5 h-3.5 mr-1 text-amber-300" />
@@ -340,8 +382,8 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
           </div>
           <CardDescription className="text-orange-100 text-sm">
             {lang === 'hi' 
-              ? 'Merge, Split, Compress, Rotate, Watermark, PDF to Word व Excel - बिना सर्वर अपलोड के सीधे आपके ब्राउज़र में' 
-              : 'Merge, Split, Compress, Rotate, Watermark, PDF to Word & Excel directly in your browser'}
+              ? 'Merge, Split, Compress, Rotate, Watermark, PDF to Word (.docx) व Excel - सीधे आपके ब्राउज़र में' 
+              : 'Merge, Split, Compress, Rotate, Watermark, PDF to Word (.docx) & Excel directly in your browser'}
           </CardDescription>
         </CardHeader>
 
@@ -390,7 +432,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
             </p>
             {files.length > 0 ? (
               <div className="mt-1 text-xs text-orange-700 font-bold max-w-md mx-auto truncate">
-                {files.map(f => f.name).join(', ')}
+                {files.map((f) => f.name).join(', ')}
               </div>
             ) : (
               <p className="text-xs text-gray-500">
@@ -407,7 +449,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
               <ScanText className="w-5 h-5 text-orange-600 animate-spin" />
               <div>
                 <p className="text-xs sm:text-sm font-bold text-orange-900">
-                  {progressStatus || (lang === 'hi' ? 'AI दस्तावेज़ प्रोसेस कर रहा है...' : 'Processing document...')}
+                  {progressStatus || (lang === 'hi' ? 'दस्तावेज़ प्रोसेस हो रहा है...' : 'Processing document...')}
                 </p>
               </div>
             </div>

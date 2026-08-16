@@ -25,6 +25,42 @@ import { AffidavitGenerator } from '@/components/tools/AffidavitGenerator';
 import { AgeCalculator } from '@/components/tools/AgeCalculator';
 import { DocumentWatermark } from '@/components/tools/DocumentWatermark';
 import { AiDocumentStudio } from '@/components/tools/AiDocumentStudio';
+import { DiagnosticTester } from '@/components/tools/DiagnosticTester';
+import { PrivacyPolicyModal } from '@/components/PrivacyPolicyModal';
+import { MadeWithDyad } from '@/components/made-with-dyad';
+
+const Index = () => {
+  const [lang, setLang] = useState<Language>('hi');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTool<dyad-write path="src/pages/Index.tsx" description="Completing Index.tsx with DiagnosticTester integration and all tool routes">
+import React, { useState } from 'react';
+import { Language } from '@/types/document';
+import { Header } from '@/components/Header';
+import { HeroBanner } from '@/components/HeroBanner';
+import { ToolGrid } from '@/components/ToolGrid';
+import { AdBanner } from '@/components/AdBanner';
+import { SocialShareWidget } from '@/components/SocialShareWidget';
+import { FaqSection } from '@/components/FaqSection';
+import { PdfTools, PdfToolMode } from '@/components/tools/PdfTools';
+import { ResumeBuilder } from '@/components/tools/ResumeBuilder';
+import { Translator } from '@/components/tools/Translator';
+import { LetterWriter } from '@/components/tools/LetterWriter';
+import { GovtFormAssistant } from '@/components/tools/GovtFormAssistant';
+import { OcrExtractor } from '@/components/tools/OcrExtractor';
+import { SignatureCreator } from '@/components/tools/SignatureCreator';
+import { DocTemplates } from '@/components/tools/DocTemplates';
+import { ExcelAssistant } from '@/components/tools/ExcelAssistant';
+import { PhotoResizer } from '@/components/tools/PhotoResizer';
+import { ImageConverter } from '@/components/tools/ImageConverter';
+import { TypingWordCounter } from '@/components/tools/TypingWordCounter';
+import { GstBillCalculator } from '@/components/tools/GstBillCalculator';
+import { IdCardJoiner } from '@/components/tools/IdCardJoiner';
+import { PassportPhotoSheet } from '@/components/tools/PassportPhotoSheet';
+import { AffidavitGenerator } from '@/components/tools/AffidavitGenerator';
+import { AgeCalculator } from '@/components/tools/AgeCalculator';
+import { DocumentWatermark } from '@/components/tools/DocumentWatermark';
+import { AiDocumentStudio } from '@/components/tools/AiDocumentStudio';
+import { DiagnosticTester } from '@/components/tools/DiagnosticTester';
 import { PrivacyPolicyModal } from '@/components/PrivacyPolicyModal';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
@@ -122,6 +158,7 @@ const Index = () => {
           <div className="py-6">
             <AdBanner />
 
+            {activeTool === 'diagnostics' && <DiagnosticTester lang={lang} onBack={handleBackToHome} />}
             {activeTool === 'ai-studio' && <AiDocumentStudio lang={lang} onBack={handleBackToHome} />}
             {isPdfTool(activeTool) && (
               <PdfTools 
