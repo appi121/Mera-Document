@@ -39,77 +39,72 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
   });
 
   return (
-    <section id="tools" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 scroll-mt-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <section id="tools" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 scroll-mt-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              {lang === 'hi' ? 'सभी टूल एक ही जगह' : 'All Tools in One Place'}
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+              {lang === 'hi' ? 'सभी टूल्स' : 'All Tools'}
             </h2>
             {cleanQuery && (
-              <Badge className="bg-orange-600 text-white font-bold text-xs px-2.5 py-0.5">
-                {filteredTools.length} {lang === 'hi' ? 'टूल मिले' : 'found'}
+              <Badge className="bg-orange-600 text-white font-bold text-[10px] px-1.5 py-0">
+                {filteredTools.length} {lang === 'hi' ? 'मिले' : 'found'}
               </Badge>
             )}
           </div>
-          <p className="text-gray-500 text-sm mt-1">
-            {cleanQuery 
-              ? (lang === 'hi' ? `"${searchQuery}" से संबंधित टूल नीचे दिए गए हैं:` : `Showing results for "${searchQuery}":`)
-              : (lang === 'hi' ? 'अपनी आवश्यकतानुसार श्रेणी या टूल पर क्लिक करें:' : 'Select a category or click on any tool:')}
-          </p>
         </div>
 
-        {/* Category Tabs */}
+        {/* Category Tabs - Systematic Menu Bar */}
         {!cleanQuery && (
-          <div className="flex flex-wrap gap-1.5 bg-gray-100 p-1.5 rounded-xl border border-gray-200 text-xs sm:text-sm font-medium">
+          <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold">
             <button
               onClick={() => setActiveCategory('all')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                activeCategory === 'all' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              className={`px-3 py-1 rounded-md transition-all ${
+                activeCategory === 'all' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {lang === 'hi' ? 'सभी (All)' : 'All Tools'}
+              {lang === 'hi' ? 'सभी (All)' : 'All'}
             </button>
             <button
               onClick={() => setActiveCategory('ai')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                activeCategory === 'ai' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              className={`px-3 py-1 rounded-md transition-all ${
+                activeCategory === 'ai' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {lang === 'hi' ? '🤖 AI सह-पायलट' : 'AI Copilot'}
+              {lang === 'hi' ? '🤖 AI टूल्स' : 'AI Tools'}
             </button>
             <button
               onClick={() => setActiveCategory('pdf')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                activeCategory === 'pdf' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              className={`px-3 py-1 rounded-md transition-all ${
+                activeCategory === 'pdf' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {lang === 'hi' ? '📄 PDF टूल' : 'PDF Tools'}
+              {lang === 'hi' ? '📄 PDF टूल्स' : 'PDF Tools'}
             </button>
             <button
               onClick={() => setActiveCategory('govt')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                activeCategory === 'govt' ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              className={`px-3 py-1 rounded-md transition-all ${
+                activeCategory === 'govt' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {lang === 'hi' ? '🖼️ फॉर्म, फोटो व ID' : 'Forms & Photos'}
+              {lang === 'hi' ? '🖼️ फॉर्म व फोटो' : 'Forms & Photos'}
             </button>
           </div>
         )}
       </div>
 
       {filteredTools.length === 0 ? (
-        <div className="text-center py-12 bg-orange-50/50 rounded-2xl border border-dashed border-orange-200 space-y-3">
-          <p className="text-gray-700 font-bold text-base">
+        <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-300 space-y-2">
+          <p className="text-slate-700 font-bold text-sm">
             {lang === 'hi' ? `"${searchQuery}" का कोई टूल नहीं मिला` : `No tools found for "${searchQuery}"`}
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-[11px] text-slate-500">
             {lang === 'hi' ? 'कृपया अलग शब्द खोजें जैसे PDF, Word, Excel, फोटो, फॉर्म या AI' : 'Try searching for terms like PDF, Word, Excel, Photo, Form or AI'}
           </p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredTools.map((tool) => (
               <ToolCard
                 key={tool.id}
@@ -120,7 +115,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ lang, searchQuery, onSelectT
             ))}
           </div>
 
-          <AdBanner className="mt-10" />
+          <AdBanner className="mt-8" />
         </>
       )}
     </section>
