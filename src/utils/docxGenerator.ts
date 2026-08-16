@@ -8,41 +8,38 @@ import {
   TableCell,
   WidthType,
   AlignmentType,
-  HeadingLevel,
   BorderStyle,
 } from 'docx';
 
 /**
- * Creates a REAL Microsoft Word .docx binary blob from plain text, structured lines, or table grids.
- * Preserves Devanagari Hindi Unicode, headings, center alignment, right alignment, tables, and lists.
+ * Creates a REAL Microsoft Word .docx binary blob from exact text or table grid.
+ * Strictly preserves verbatim Hindi Devanagari, English, digits, punctuation, and line breaks without mutation.
  */
 export async function createRealDocxBlob(
   textContent: string,
   gridMatrix?: string[][],
-  docTitle: string = 'Document'
+  docTitle?: string
 ): Promise<Blob> {
   const children: (Paragraph | Table)[] = [];
 
-  // If a structured 2D table grid exists and has multiple rows
+  // 1. If 2D table grid is present, build native OpenXML Table
   if (gridMatrix && gridMatrix.length > 0 && gridMatrix[0].length > 0) {
     const cleanRows = gridMatrix.filter((r) => r.some((c) => (c || '').trim() !== ''));
 
     if (cleanRows.length > 0) {
-      // Add optional document title paragraph
-      if (docTitle && docTitle !== 'Document') {
+      if (docTitle && docTitle !== 'Document' && docTitle.trim()) {
         children.push(
           new Paragraph({
             children: [
               new TextRun({
                 text: docTitle,
                 bold: true,
-                size: 28, // 14pt
+                size: 26, // 13pt
                 font: 'Noto Sans Devanagari',
                 color: '1E293B',
               }),
             ],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 200 },
+            spacing: { after: 180 },
           })
         );
       }
@@ -52,33 +49,33 @@ export async function createRealDocxBlob(
         return new TableRow({
           tableHeader: isHeader,
           children: row.map((cellText) => {
-            const rawCell = (cellText || '').trim();
-            const lines = rawCell.split('\n');
+            const rawCell = cellText || '';
+            const cellLines = rawCell.split('\n');
 
             return new TableCell({
               width: {
-                size: Math.floor(100 / row.length),
+                size: Math.floor(100 / Math.max(1, row.length)),
                 type: WidthType.PERCENTAGE,
               },
-              shading: isHeader ? { fill: 'F1F5F9' } : undefined,
+              shading: isHeader ? { fill: 'F8FAFC' } : undefined,
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
                 bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
                 left: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
                 right: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
               },
-              children: lines.map((l) =>
+              children: cellLines.map((line) =>
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: l,
+                      text: line,
                       bold: isHeader,
                       size: 20, // 10pt
                       font: 'Noto Sans Devanagari',
                       color: isHeader ? '0F172A' : '334155',
                     }),
                   ],
-                  spacing: { before: 50, after: 50 },
+                  spacing: { before: 40, after: 40 },
                 })
               ),
             });
@@ -95,24 +92,20 @@ export async function createRealDocxBlob(
     }
   }
 
-  // Parse text paragraphs if children is empty or alongside table
+  // 2. Parse exact paragraphs verbatim
   if (textContent && children.length === 0) {
     const rawLines = textContent.split('\n');
 
     rawLines.forEach((line) => {
-      const trimmed = line.trim();
-
-      if (!trimmed) {
-        children.push(new Paragraph({ spacing: { after: 100 } }));
+      // Preserve blank line spacing
+      if (!line || !line.trim()) {
+        children.push(new Paragraph({ spacing: { after: 80 } }));
         return;
       }
 
-      // Check if line represents a table row with delimiters
+      // Check if line represents delimited table row
       if (line.includes('|') || line.includes('\t')) {
-        const cells = line
-          .split(/[\t|]/)
-          .map((c) => c.trim())
-          .filter(Boolean);
+        const cells = line.split(/[\t|]/).map((c) => c.trim()).filter((c) => c.length > 0);
 
         if (cells.length >= 2) {
           const row = new TableRow({
@@ -150,49 +143,19 @@ export async function createRealDocxBlob(
         }
       }
 
-      const leadingSpaces = line.length - line.trimStart().length;
-
-      const isHeading =
-        leadingSpaces > 14 ||
-        /^(कार्यालय|शासकीय|प्रमाण पत्र|शपथ पत्र|अनुसूची|RESUME|BIODATA|CURRICULUM|EXPERIENCE|SALARY|RENT|AFFIDAVIT|DECLARATION|स्लोगन|नारे)/i.test(
-          trimmed
-        ) ||
-        (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-        trimmed.startsWith('===');
-
-      const isRightAligned =
-        leadingSpaces > 32 ||
-        /^(हस्ताक्षर|भवदीय|दिनांक:|Date:|स्थान:|Place:|प्राचार्य|शाखा प्रभारी|अधीक्षक|थाना प्रभारी)/i.test(
-          trimmed
-        );
-
-      let alignment = AlignmentType.LEFT;
-      let isBold = false;
-      let fontSize = 22; // 11pt
-
-      if (isHeading) {
-        alignment = AlignmentType.CENTER;
-        isBold = true;
-        fontSize = 24; // 12pt
-      } else if (isRightAligned) {
-        alignment = AlignmentType.RIGHT;
-      } else if (trimmed.startsWith('विषय') || trimmed.startsWith('Subject:') || trimmed.startsWith('महोदय')) {
-        isBold = true;
-      }
-
+      // Exact text run preservation
       children.push(
         new Paragraph({
           children: [
             new TextRun({
-              text: trimmed,
-              bold: isBold,
-              size: fontSize,
+              text: line,
               font: 'Noto Sans Devanagari',
+              size: 22, // 11pt
               color: '1E293B',
             }),
           ],
-          alignment,
-          spacing: { after: 120, line: 280 },
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 100, line: 260 },
         })
       );
     });

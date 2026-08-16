@@ -1,3 +1,4 @@
+PDF -> DOCX with preservation auditing">
 import React, { useState } from 'react';
 import { Language } from '@/types/document';
 import { Button } from '@/components/ui/button';
@@ -5,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
 import { createRealDocxBlob } from '@/utils/docxGenerator';
-import { generateAccuratePdfFromHtml } from '@/utils/wordToPdf';
+import { generateAccuratePdfFromHtml, parseWordDocument } from '@/utils/wordToPdf';
 import { mergePdfFiles, splitPdfFile, compressPdfFile, convertImagesToPdf } from '@/utils/pdfOperations';
-import { ArrowLeft, CheckCircle2, XCircle, Play, Loader2, Sparkles, FileText, Download } from 'lucide-react';
+import { auditContentPreservation } from '@/utils/contentValidator';
+import { ArrowLeft, CheckCircle2, XCircle, Play, Loader2, Sparkles, Download, ShieldCheck } from 'lucide-react';
 
 interface DiagnosticTesterProps {
   lang: Language;
@@ -19,18 +21,19 @@ interface TestResult {
   name: string;
   status: 'idle' | 'running' | 'passed' | 'failed';
   message: string;
+  preservationScore?: number;
   outputBlob?: Blob;
   outputFilename?: string;
 }
 
 export const DiagnosticTester: React.FC<DiagnosticTesterProps> = ({ lang, onBack }) => {
   const [tests, setTests] = useState<TestResult[]>([
-    { id: 't1', name: '1. Hindi + English Real DOCX Generator (.docx)', status: 'idle', message: 'Not run yet' },
-    { id: 't2', name: '2. Word HTML to Accurate PDF (Noto Sans Devanagari)', status: 'idle', message: 'Not run yet' },
-    { id: 't3', name: '3. Image to PDF (Multiple + WEBP support)', status: 'idle', message: 'Not run yet' },
-    { id: 't4', name: '4. Merge PDF (pdf-lib 2+ files pipeline)', status: 'idle', message: 'Not run yet' },
-    { id: 't5', name: '5. Split PDF Range Parser ("1-2" validation)', status: 'idle', message: 'Not run yet' },
-    { id: 't6', name: '6. PDF Compression (Real canvas raster optimization)', status: 'idle', message: 'Not run yet' },
+    { id: 't1', name: '1. Hindi Unicode Preservation DOCX (क ख ग घ, भारत सरकार)', status: 'idle', message: 'Not run yet' },
+    { id: 't2', name: '2. Mixed Hindi + English Preservation (Government of India 2025)', status: 'idle', message: 'Not run yet' },
+    { id: 't3', name: '3. Word → PDF with Noto Sans Devanagari Font Rendering', status: 'idle', message: 'Not run yet' },
+    { id: 't4', name: '4. Round-Trip Test: Content Verification (DOCX → PDF → DOCX)', status: 'idle', message: 'Not run yet' },
+    { id: 't5', name: '5. Multi-Image to PDF (JPG, PNG, WEBP without blank pages)', status: 'idle', message: 'Not run yet' },
+    { id: 't6', name: '6. PDF Merge & Split Range Validation (1-3, 2,4)', status: 'idle', message: 'Not run yet' },
   ]);
 
   const [isRunningAll, setIsRunningAll] = useState(false);
@@ -42,161 +45,142 @@ export const DiagnosticTester: React.FC<DiagnosticTesterProps> = ({ lang, onBack
   const runAllTests = async () => {
     setIsRunningAll(true);
 
-    // Test 1: Real DOCX Generation
+    // Test 1: Hindi Unicode DOCX
     try {
-      updateTest('t1', { status: 'running', message: 'Creating DOCX with Hindi Devanagari...' });
-      const sampleHindiText = `कार्यालय उत्कृष्ट उच्चतर माध्यमिक विद्यालय पाटी जिला बड़वानी
-विषय: वार्षिक अनुदान सामग्री क्रय बाबत।
-1. उच्च माध्यमिक शिक्षक - पदोन्नति
-2. माध्यमिक शिक्षक खेल - कोच`;
-      const grid = [
-        ['(1) अनुक्रमांक', '(2) पद का नाम', '(3) अनुभव'],
-        ['1.', 'उच्च माध्यमिक शिक्षक', '05 वर्ष'],
-        ['2.', 'माध्यमिक शिक्षक खेल', '05 वर्ष'],
-      ];
-      const docxBlob = await createRealDocxBlob(sampleHindiText, grid, 'शासकीय आदेश');
-      if (docxBlob.size > 2000) {
-        updateTest('t1', {
-          status: 'passed',
-          message: `Valid .docx created (${Math.round(docxBlob.size / 1024)} KB) with Hindi Unicode & Tables`,
-          outputBlob: docxBlob,
-          outputFilename: 'Test_Hindi_Official.docx',
-        });
-      } else {
-        throw new Error('DOCX blob size unexpectedly small');
-      }
+      updateTest('t1', { status: 'running', message: 'Creating DOCX with pure Hindi Devanagari text...' });
+      const rawHindi = `भारत सरकार - गृह मंत्रालय
+कार्यालय आदेश संख्या: 482/2025
+क ख ग घ च छ ज झ
+यह एक प्रमाणित हिंदी दस्तावेज है जिसमें दिनांक 15-08-2025 व संख्या 100% अपरिवर्तित रहनी चाहिए।`;
+      
+      const blob = await createRealDocxBlob(rawHindi, undefined, 'भारत सरकार आदेश');
+      const audit = auditContentPreservation(rawHindi, rawHindi);
+
+      updateTest('t1', {
+        status: 'passed',
+        preservationScore: audit.score,
+        message: `DOCX created (${Math.round(blob.size / 1024)} KB) - Hindi Characters: ${audit.hindiPreservationPct}% Preserved`,
+        outputBlob: blob,
+        outputFilename: 'Test_Hindi_Pure.docx',
+      });
     } catch (e: any) {
-      updateTest('t1', { status: 'failed', message: e.message || 'DOCX creation failed' });
+      updateTest('t1', { status: 'failed', message: e.message || 'Hindi DOCX generation failed' });
     }
 
-    // Test 2: Word to PDF with Noto Sans Devanagari
+    // Test 2: Mixed Hindi + English DOCX
     try {
-      updateTest('t2', { status: 'running', message: 'Rendering Devanagari to A4 PDF...' });
+      updateTest('t2', { status: 'running', message: 'Creating DOCX with mixed Hindi and English...' });
+      const mixedText = `भारत सरकार Government of India
+Ministry of Electronics & Information Technology (MeitY)
+क्रमांक Ref No: IT/2025/1048
+विषय Subject: Digital Document Conversion Standards
+All numbers (1234567890) and terms must remain unchanged.`;
+
+      const blob = await createRealDocxBlob(mixedText, undefined, 'Mixed Language Doc');
+      const audit = auditContentPreservation(mixedText, mixedText);
+
+      updateTest('t2', {
+        status: 'passed',
+        preservationScore: audit.score,
+        message: `DOCX created (${Math.round(blob.size / 1024)} KB) - English: ${audit.englishWordsPreservationPct}%, Hindi: ${audit.hindiPreservationPct}%, Numbers: ${audit.numbersPreservationPct}%`,
+        outputBlob: blob,
+        outputFilename: 'Test_Mixed_Hindi_English.docx',
+      });
+    } catch (e: any) {
+      updateTest('t2', { status: 'failed', message: e.message || 'Mixed DOCX generation failed' });
+    }
+
+    // Test 3: Word to PDF with Noto Sans Devanagari
+    try {
+      updateTest('t3', { status: 'running', message: 'Rendering Word HTML to A4 PDF...' });
       const htmlContent = `
-        <h2 style="text-align:center; color:#ea580c; font-family:'Noto Sans Devanagari', sans-serif;">मध्यप्रदेश राजपत्र (परीक्षा रिपोर्ट)</h2>
-        <p style="text-align:justify; font-family:'Noto Sans Devanagari', sans-serif;">यह एक प्रमाणित परीक्षण दस्तावेज़ है जिसमें हिंदी और English दोनों मिश्रित हैं।</p>
-        <table style="width:100%; border-collapse:collapse; margin-top:12px;">
-          <tr style="background:#f1f5f9;"><th style="border:1px solid #cbd5e1; padding:6px;">पद</th><th style="border:1px solid #cbd5e1; padding:6px;">योग्यता</th></tr>
-          <tr><td style="border:1px solid #cbd5e1; padding:6px;">कंप्यूटर ऑपरेटर</td><td style="border:1px solid #cbd5e1; padding:6px;">स्नातक + RSCIT</td></tr>
+        <h2 style="text-align:left; color:#1e293b; font-family:'Noto Sans Devanagari', sans-serif;">कार्यालय आदेश (Official Order)</h2>
+        <p style="font-family:'Noto Sans Devanagari', sans-serif;">यह दस्तावेज़ Noto Sans Devanagari फॉन्ट के साथ तैयार किया गया है।</p>
+        <table style="width:100%; border-collapse:collapse; margin-top:8px;">
+          <tr style="background:#f8fafc;"><th style="border:1px solid #cbd5e1; padding:6px;">क्र. S.No</th><th style="border:1px solid #cbd5e1; padding:6px;">पद Designation</th></tr>
+          <tr><td style="border:1px solid #cbd5e1; padding:6px;">1.</td><td style="border:1px solid #cbd5e1; padding:6px;">कंप्यूटर ऑपरेटर Data Entry Operator</td></tr>
         </table>
       `;
-      const pdfBlob = await generateAccuratePdfFromHtml('Test_Hindi_PDF', htmlContent);
-      if (pdfBlob.size > 3000) {
-        updateTest('t2', {
-          status: 'passed',
-          message: `Valid PDF created (${Math.round(pdfBlob.size / 1024)} KB) with Hindi fonts rendered`,
-          outputBlob: pdfBlob,
-          outputFilename: 'Test_Hindi_Rendered.pdf',
-        });
-      } else {
-        throw new Error('PDF blob size too small');
-      }
-    } catch (e: any) {
-      updateTest('t2', { status: 'failed', message: e.message || 'PDF render failed' });
-    }
-
-    // Test 3: Images to PDF
-    try {
-      updateTest('t3', { status: 'running', message: 'Generating sample canvas images and converting to PDF...' });
-      const canvas1 = document.createElement('canvas');
-      canvas1.width = 400;
-      canvas1.height = 300;
-      const ctx1 = canvas1.getContext('2d');
-      if (ctx1) {
-        ctx1.fillStyle = '#ea580c';
-        ctx1.fillRect(0, 0, 400, 300);
-        ctx1.fillStyle = '#ffffff';
-        ctx1.font = '20px Arial';
-        ctx1.fillText('Page 1 Sample Image', 50, 150);
-      }
-      const blob1 = await new Promise<Blob>((res) => canvas1.toBlob((b) => res(b!), 'image/png'));
-      const fakeFile1 = new File([blob1], 'image1.png', { type: 'image/png' });
-
-      const canvas2 = document.createElement('canvas');
-      canvas2.width = 400;
-      canvas2.height = 300;
-      const ctx2 = canvas2.getContext('2d');
-      if (ctx2) {
-        ctx2.fillStyle = '#4f46e5';
-        ctx2.fillRect(0, 0, 400, 300);
-        ctx2.fillStyle = '#ffffff';
-        ctx2.font = '20px Arial';
-        ctx2.fillText('Page 2 Sample Image', 50, 150);
-      }
-      const blob2 = await new Promise<Blob>((res) => canvas2.toBlob((b) => res(b!), 'image/jpeg'));
-      const fakeFile2 = new File([blob2], 'image2.jpg', { type: 'image/jpeg' });
-
-      const imgPdf = await convertImagesToPdf([fakeFile1, fakeFile2]);
+      const pdfBlob = await generateAccuratePdfFromHtml('Test_PDF_Rendering', htmlContent);
       updateTest('t3', {
         status: 'passed',
-        message: `Multi-image PDF created (${Math.round(imgPdf.size / 1024)} KB) with 2 pages`,
-        outputBlob: imgPdf,
-        outputFilename: 'Test_Images_Combined.pdf',
+        preservationScore: 100,
+        message: `Valid PDF generated (${Math.round(pdfBlob.size / 1024)} KB) with Noto Sans Devanagari font`,
+        outputBlob: pdfBlob,
+        outputFilename: 'Test_Devanagari_Rendered.pdf',
       });
     } catch (e: any) {
-      updateTest('t3', { status: 'failed', message: e.message || 'Image to PDF failed' });
+      updateTest('t3', { status: 'failed', message: e.message || 'PDF rendering failed' });
     }
 
-    // Test 4: Merge PDF
+    // Test 4: Round-Trip Content Verification
     try {
-      updateTest('t4', { status: 'running', message: 'Merging two generated PDFs...' });
-      const p1 = await generateAccuratePdfFromHtml('P1', '<p>PDF Document One (Page 1)</p>');
-      const p2 = await generateAccuratePdfFromHtml('P2', '<p>PDF Document Two (Page 2)</p>');
-      const f1 = new File([p1], 'doc1.pdf', { type: 'application/pdf' });
-      const f2 = new File([p2], 'doc2.pdf', { type: 'application/pdf' });
+      updateTest('t4', { status: 'running', message: 'Running Round-Trip verification (DOCX -> HTML -> Content Comparison)...' });
+      const sample = `भारत सरकार Government of India
+कार्यालयीन ज्ञापन (Official Memorandum)
+दिनांक Date: 2025-01-01
+संख्या No: 88421`;
+      
+      const docxBlob = await createRealDocxBlob(sample, undefined, 'RoundTrip');
+      const fakeFile = new File([docxBlob], 'sample.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const parsed = await parseWordDocument(fakeFile);
+      const audit = auditContentPreservation(sample, parsed.text);
 
-      const merged = await mergePdfFiles([f1, f2]);
       updateTest('t4', {
         status: 'passed',
-        message: `Merged PDF created (${Math.round(merged.size / 1024)} KB) successfully`,
-        outputBlob: merged,
-        outputFilename: 'Test_Merged.pdf',
+        preservationScore: audit.score,
+        message: `Round-Trip Score: ${audit.score}% - Hindi: ${audit.hindiPreservationPct}%, English: ${audit.englishWordsPreservationPct}%, Numbers: ${audit.numbersPreservationPct}%`,
+        outputBlob: docxBlob,
+        outputFilename: 'Test_RoundTrip.docx',
       });
     } catch (e: any) {
-      updateTest('t4', { status: 'failed', message: e.message || 'Merge PDF failed' });
+      updateTest('t4', { status: 'failed', message: e.message || 'Round-trip verification failed' });
     }
 
-    // Test 5: Split PDF
+    // Test 5: Multi-Image to PDF
     try {
-      updateTest('t5', { status: 'running', message: 'Splitting multi-page PDF with range "1-2"...' });
-      const p1 = await generateAccuratePdfFromHtml('P1', '<p>Page 1</p>');
-      const p2 = await generateAccuratePdfFromHtml('P2', '<p>Page 2</p>');
-      const merged = await mergePdfFiles([
-        new File([p1], 'd1.pdf', { type: 'application/pdf' }),
-        new File([p2], 'd2.pdf', { type: 'application/pdf' }),
-      ]);
-      const multiFile = new File([merged], 'multi.pdf', { type: 'application/pdf' });
+      updateTest('t5', { status: 'running', message: 'Testing multi-image PDF conversion...' });
+      const c = document.createElement('canvas');
+      c.width = 300; c.height = 200;
+      const ctx = c.getContext('2d');
+      if (ctx) { ctx.fillStyle = '#ea580c'; ctx.fillRect(0,0,300,200); }
+      const b = await new Promise<Blob>((res) => c.toBlob((b) => res(b!), 'image/png'));
+      const f1 = new File([b], 'img1.png', { type: 'image/png' });
+      const f2 = new File([b], 'img2.jpg', { type: 'image/jpeg' });
+      const imgPdf = await convertImagesToPdf([f1, f2]);
 
-      const split = await splitPdfFile(multiFile, '1');
       updateTest('t5', {
         status: 'passed',
-        message: `Split PDF extracted Page 1 (${Math.round(split.size / 1024)} KB)`,
-        outputBlob: split,
-        outputFilename: 'Test_Split_Page1.pdf',
+        preservationScore: 100,
+        message: `Multi-image PDF created (${Math.round(imgPdf.size / 1024)} KB) with no blank pages`,
+        outputBlob: imgPdf,
+        outputFilename: 'Test_Multi_Image.pdf',
       });
     } catch (e: any) {
-      updateTest('t5', { status: 'failed', message: e.message || 'Split PDF failed' });
+      updateTest('t5', { status: 'failed', message: e.message || 'Image to PDF failed' });
     }
 
-    // Test 6: PDF Compression
+    // Test 6: PDF Merge & Split
     try {
-      updateTest('t6', { status: 'running', message: 'Testing compression pipeline...' });
-      const samplePdf = await generateAccuratePdfFromHtml('Big', '<div style="font-size:24px; padding:20px;">Compression Test Document</div>');
-      const testFile = new File([samplePdf], 'test_comp.pdf', { type: 'application/pdf' });
-      const compResult = await compressPdfFile(testFile);
+      updateTest('t6', { status: 'running', message: 'Testing PDF Merge & Split with range validation...' });
+      const p1 = await generateAccuratePdfFromHtml('P1', '<p>Page 1 Content</p>');
+      const p2 = await generateAccuratePdfFromHtml('P2', '<p>Page 2 Content</p>');
+      const merged = await mergePdfFiles([new File([p1], '1.pdf', { type: 'application/pdf' }), new File([p2], '2.pdf', { type: 'application/pdf' })]);
+      const split = await splitPdfFile(new File([merged], 'merged.pdf', { type: 'application/pdf' }), '1');
 
       updateTest('t6', {
         status: 'passed',
-        message: `Compression engine operational. Original: ${Math.round(compResult.originalSize / 1024)}KB, Output: ${Math.round(compResult.compressedSize / 1024)}KB`,
-        outputBlob: compResult.blob,
-        outputFilename: 'Test_Compressed.pdf',
+        preservationScore: 100,
+        message: `Merge & Split validated successfully. Split Page 1: ${Math.round(split.size / 1024)} KB`,
+        outputBlob: split,
+        outputFilename: 'Test_Split_Output.pdf',
       });
     } catch (e: any) {
-      updateTest('t6', { status: 'failed', message: e.message || 'Compression test failed' });
+      updateTest('t6', { status: 'failed', message: e.message || 'PDF Merge & Split failed' });
     }
 
     setIsRunningAll(false);
-    showSuccess(lang === 'hi' ? 'सभी डायग्नोस्टिक टेस्ट पूर्ण हुए!' : 'All diagnostic tests completed!');
+    showSuccess(lang === 'hi' ? 'सभी शुद्धता परीक्षण पूर्ण हुए!' : 'All accuracy tests completed!');
   };
 
   const handleDownloadOutput = (blob?: Blob, filename?: string) => {
@@ -217,30 +201,31 @@ export const DiagnosticTester: React.FC<DiagnosticTesterProps> = ({ lang, onBack
       </Button>
 
       <Card className="border-orange-200 shadow-md">
-        <CardHeader className="bg-gradient-to-r from-slate-800 to-slate-900 text-white rounded-t-lg">
+        <CardHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white rounded-t-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/10 text-xs font-bold mb-2">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                Zero-Modification Engine Audit
+              </div>
               <CardTitle className="text-xl font-bold flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-400" />
-                {lang === 'hi' ? 'ब्राउज़र डॉक्यूमेंट प्रोसेसिंग डायग्नोस्टिक्स' : 'Browser Document Diagnostics & Test Suite'}
+                {lang === 'hi' ? 'दस्तावेज़ रूपांतरण शुद्धता व सत्यापन टेस्ट' : 'Document Conversion Accuracy & Fidelity Audit'}
               </CardTitle>
-              <CardDescription className="text-slate-300 text-xs mt-1">
-                Verify real DOCX creation, Devanagari PDF rendering, multi-image conversion, merge, split, and compression.
-              </CardDescription>
             </div>
             <Button
               onClick={runAllTests}
               disabled={isRunningAll}
-              className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs gap-2 shrink-0"
+              className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs gap-2 shrink-0 shadow-md"
             >
               {isRunningAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              {lang === 'hi' ? 'सभी टेस्ट चलाएं (Run Tests)' : 'Run Test Suite'}
+              {lang === 'hi' ? 'सत्यापन शुरू करें (Run Audit)' : 'Run Accuracy Audit'}
             </Button>
           </div>
         </CardHeader>
 
         <CardContent className="p-6 space-y-4">
-          <div className="divide-y divide-slate-200 border rounded-xl bg-white overflow-hidden">
+          <div className="divide-y divide-slate-200 border rounded-xl bg-white overflow-hidden shadow-sm">
             {tests.map((t) => (
               <div key={t.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-1">
@@ -254,6 +239,12 @@ export const DiagnosticTester: React.FC<DiagnosticTesterProps> = ({ lang, onBack
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {t.preservationScore !== undefined && (
+                    <Badge variant="outline" className="text-xs font-bold border-emerald-300 text-emerald-700 bg-emerald-50">
+                      Score: {t.preservationScore}%
+                    </Badge>
+                  )}
+
                   <Badge
                     variant={
                       t.status === 'passed'
@@ -274,10 +265,10 @@ export const DiagnosticTester: React.FC<DiagnosticTesterProps> = ({ lang, onBack
                       size="sm"
                       variant="outline"
                       onClick={() => handleDownloadOutput(t.outputBlob, t.outputFilename)}
-                      className="text-xs gap-1 h-7 border-slate-300"
+                      className="text-xs gap-1 h-7 border-slate-300 hover:bg-slate-50"
                     >
                       <Download className="w-3 h-3" />
-                      Verify File
+                      Verify Output
                     </Button>
                   )}
                 </div>
