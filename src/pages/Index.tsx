@@ -47,6 +47,7 @@ const Index = () => {
     switch (toolId) {
       case 'pdf-to-word': return 'pdf-to-word';
       case 'pdf-to-excel': return 'pdf-to-excel';
+      case 'pdf-to-jpg': return 'pdf-to-jpg';
       case 'word-to-pdf': return 'word-to-pdf';
       case 'excel-to-pdf': return 'excel-to-pdf';
       case 'ppt-to-pdf': return 'ppt-to-pdf';
@@ -54,6 +55,9 @@ const Index = () => {
       case 'merge-pdf': return 'merge';
       case 'split-pdf': return 'split';
       case 'compress-pdf': return 'compress';
+      case 'rotate-pdf': return 'rotate';
+      case 'page-numbers': return 'page-numbers';
+      case 'pdf-watermark': return 'watermark';
       default: return 'pdf-to-word';
     }
   };
@@ -63,6 +67,7 @@ const Index = () => {
     return [
       'pdf-to-word',
       'pdf-to-excel',
+      'pdf-to-jpg',
       'word-to-pdf',
       'excel-to-pdf',
       'ppt-to-pdf',
@@ -70,6 +75,9 @@ const Index = () => {
       'merge-pdf',
       'split-pdf',
       'compress-pdf',
+      'rotate-pdf',
+      'page-numbers',
+      'pdf-watermark',
       'pdf'
     ].includes(toolId);
   };

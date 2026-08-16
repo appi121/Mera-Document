@@ -7,8 +7,9 @@ export interface ToolItem {
   descHi: string;
   descEn: string;
   icon: string;
-  category: 'popular' | 'pdf' | 'ai' | 'utilities';
+  category: 'popular' | 'pdf' | 'organize' | 'convert-to-pdf' | 'convert-from-pdf' | 'security' | 'ai' | 'utilities';
   badgeHi?: string;
   badgeEn?: string;
   keywords?: string;
+  badgeColor?: string;
 }
