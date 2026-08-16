@@ -1,13 +1,12 @@
-PDF -> DOCX with preservation auditing">
 import React, { useState } from 'react';
 import { Language } from '@/types/document';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess } from '@/utils/toast';
 import { createRealDocxBlob } from '@/utils/docxGenerator';
 import { generateAccuratePdfFromHtml, parseWordDocument } from '@/utils/wordToPdf';
-import { mergePdfFiles, splitPdfFile, compressPdfFile, convertImagesToPdf } from '@/utils/pdfOperations';
+import { mergePdfFiles, splitPdfFile, convertImagesToPdf } from '@/utils/pdfOperations';
 import { auditContentPreservation } from '@/utils/contentValidator';
 import { ArrowLeft, CheckCircle2, XCircle, Play, Loader2, Sparkles, Download, ShieldCheck } from 'lucide-react';
 
