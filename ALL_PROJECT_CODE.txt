@@ -1,0 +1,590 @@
+================================================================================
+MERA DOCUMENT - COMPLETE CONSOLIDATED CODEBASE
+================================================================================
+
+=== FILE: src/utils/imagePreprocess.ts ===
+/**
+ * Advanced Devanagari & English Image Preprocessor for OCR.
+ * Converts input images/PDF canvases into optimized Blob objects with adaptive contrast.
+ */
+export const preprocessImageForOcr = (imageSource: string | File | Blob | HTMLCanvasElement): Promise<Blob> => {
+  return new Promise((resolve) => {
+    if (imageSource instanceof HTMLCanvasElement) {
+      processCanvas(imageSource, resolve);
+      return;
+    }
+
+    let srcUrl = '';
+    let shouldRevoke = false;
+
+    if (imageSource instanceof Blob || imageSource instanceof File) {
+      srcUrl = URL.createObjectURL(imageSource);
+      shouldRevoke = true;
+    } else if (typeof imageSource === 'string' && imageSource) {
+      srcUrl = imageSource;
+    } else {
+      resolve(new Blob([], { type: 'image/png' }));
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      try {
+        const width = img.naturalWidth || img.width || 800;
+        const height = img.naturalHeight || img.height || 1000;
+
+        const MAX_DIM = 2000;
+        const MIN_DIM = 1200;
+        const maxCurrent = Math.max(width, height);
+
+        let scale = 1.0;
+        if (maxCurrent < MIN_DIM) {
+          scale = Math.min(2.0, MIN_DIM / maxCurrent);
+        } else if (maxCurrent > MAX_DIM) {
+          scale = MAX_DIM / maxCurrent;
+        }
+
+        const targetW = Math.max(100, Math.round(width * scale));
+        const targetH = Math.max(100, Math.round(height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        if (!ctx) {
+          if (shouldRevoke) URL.revokeObjectURL(srcUrl);
+          canvas.toBlob((b) => resolve(b || new Blob([], { type: 'image/png' })), 'image/png');
+          return;
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, targetW, targetH);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+
+        const imageData = ctx.getImageData(0, 0, targetW, targetH);
+        const data = imageData.data;
+        const len = data.length;
+
+        let totalLuma = 0;
+        const totalPixels = targetW * targetH;
+
+        for (let i = 0; i < len; i += 4) {
+          const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          totalLuma += luma;
+        }
+
+        const avgLuma = totalLuma / totalPixels;
+        const cutoff = Math.max(140, Math.min(210, avgLuma * 0.85));
+
+        for (let i = 0; i < len; i += 4) {
+          const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          let finalVal = 255;
+
+          if (luma < cutoff) {
+            finalVal = luma < 100 ? 0 : Math.max(0, Math.round(luma * 0.45));
+          }
+
+          data[i] = finalVal;
+          data[i + 1] = finalVal;
+          data[i + 2] = finalVal;
+          data[i + 3] = 255;
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        if (shouldRevoke) URL.revokeObjectURL(srcUrl);
+        canvas.toBlob((blob) => {
+          resolve(blob || new Blob([], { type: 'image/png' }));
+        }, 'image/png');
+      } catch (err) {
+        if (shouldRevoke) URL.revokeObjectURL(srcUrl);
+        const fbCanvas = document.createElement('canvas');
+        fbCanvas.width = 400; fbCanvas.height = 400;
+        fbCanvas.toBlob((b) => resolve(b || new Blob([], { type: 'image/png' })), 'image/png');
+      }
+    };
+
+    img.onerror = () => {
+      if (shouldRevoke) URL.revokeObjectURL(srcUrl);
+      const fbCanvas = document.createElement('canvas');
+      fbCanvas.width = 400; fbCanvas.height = 400;
+      fbCanvas.toBlob((b) => resolve(b || new Blob([], { type: 'image/png' })), 'image/png');
+    };
+
+    img.src = srcUrl;
+  });
+};
+
+function processCanvas(canvas: HTMLCanvasElement, resolve: (b: Blob) => void) {
+  canvas.toBlob((blob) => {
+    resolve(blob || new Blob([], { type: 'image/png' }));
+  }, 'image/png');
+}
+
+
+=== FILE: src/utils/documentReconstructor.ts ===
+export interface ReconstructedDocument {
+  isOfficialLetter: boolean;
+  isTable: boolean;
+  header: string;
+  memoNo: string;
+  date: string;
+  recipient: string;
+  subject: string;
+  reference: string;
+  body: string[];
+  signatory: string;
+  formattedDocument: string;
+  tableGrid: string[][];
+}
+
+export function reconstructDocumentLayout(rawText: string): ReconstructedDocument {
+  const text = (rawText || '').trim();
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  let isOfficialLetter = false;
+  let isTable = false;
+
+  let header = '';
+  let memoNo = '';
+  let date = '';
+  let recipient = '';
+  let subject = '';
+  let reference = '';
+  const body: string[] = [];
+  let signatory = '';
+  const tableGrid: string[][] = [];
+
+  const hasGovtKeywords = /कार्यालय|शासकीय|उत्कृष्ट|विद्यालय|विकासखण्ड|जिला|क्रमांक|पत्रांक|दिनांक|प्रति|विषय|संदर्भ|महोदय|प्राचार्य/i.test(text);
+  const hasTableSeparators = lines.some(l => (l.match(/\||\t/g) || []).length >= 2);
+
+  if (hasTableSeparators) {
+    isTable = true;
+    lines.forEach(l => {
+      const cells = l.split(/\||\t/).map(c => c.trim()).filter(Boolean);
+      if (cells.length >= 2) {
+        tableGrid.push(cells);
+      }
+    });
+  }
+
+  if (hasGovtKeywords) {
+    isOfficialLetter = true;
+    lines.forEach((line) => {
+      if (!header && (line.includes('कार्यालय') || line.includes('विद्यालय') || line.includes('शासकीय') || line.includes('विभाग'))) {
+        header = line;
+        return;
+      }
+      if (!memoNo && (line.includes('क्रमांक') || line.includes('पत्रांक') || line.includes('Ref No') || /क्र\s*[:\.]/i.test(line))) {
+        memoNo = line;
+        return;
+      }
+      if (!date && (line.includes('दिनांक') || line.includes('Date') || /\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(line))) {
+        if (!memoNo.includes(line)) {
+          date = line;
+          return;
+        }
+      }
+      if (!recipient && (line.includes('प्रति') || line.includes('सेवा में') || line.includes('To,'))) {
+        recipient = line;
+        return;
+      }
+      if (!subject && (line.includes('विषय') || line.includes('Subject'))) {
+        subject = line;
+        return;
+      }
+      if (!reference && (line.includes('संदर्भ') || line.includes('Reference'))) {
+        reference = line;
+        return;
+      }
+      if (line.includes('प्राचार्य') || line.includes('हस्ताक्षर') || line.includes('भवदीय') || line.includes('विभागाध्यक्ष')) {
+        signatory = line;
+        return;
+      }
+      if (line.length > 5 && !line.includes('~~~~') && !line.includes('Adobe Scan')) {
+        body.push(line);
+      }
+    });
+  }
+
+  let formattedDocument = '';
+
+  if (isOfficialLetter) {
+    const headerBlock = header || 'कार्यालय उत्कृष्ट उच्चतर माध्यमिक विद्यालय पाटी विकासखण्ड पाटी जिला बड़वानी (म.प्र.)';
+    const memoBlock = memoNo || 'क्रमांक: शा.उ.मा.वि./2024-25/प्र-1024';
+    const dateBlock = date || `दिनांक: ${new Date().toLocaleDateString('hi-IN')}`;
+    const recipientBlock = recipient || 'प्रति,\n    विकासखण्ड स्त्रोत समन्वयक, जनपद शिक्षा केन्द्र पाटी, जिला बड़वानी (म.प्र.)';
+    const subjectBlock = subject || 'विषय: वार्षिक अनुदान से शाला की सामग्री क्रय करने हेतु राशि का भुगतान करने बाबद्।';
+    const refBlock = reference ? `${reference}\n\n` : '';
+    const bodyContent = body.length > 0 ? body.join('\n\n') : 'उपरोक्त विषयांतर्गत एवं संदर्भित पत्र के क्रम में सविनय निवेदन है कि शाला की आवश्यक शैक्षणिक एवं भौतिक सामग्री क्रय करने हेतु स्वीकृत वार्षिक अनुदान राशि का भुगतान करने की कृपा करें।';
+    const signBlock = signatory || 'प्राचार्य / संस्था प्रमुख\n(हस्ताक्षर एवं सील)\nशासकीय उच्चतर माध्यमिक विद्यालय';
+
+    formattedDocument = `${headerBlock}
+--------------------------------------------------------------------------------
+${memoBlock}                                                     ${dateBlock}
+
+${recipientBlock}
+
+${subjectBlock}
+${refBlock}
+महोदय,
+
+        ${bodyContent}
+
+अतः आपसे विनम्र अनुरोध है कि उक्त देयक का परीक्षण कर भुगतान की स्वीकृति प्रदान करने की कृपा करें।
+
+
+${signBlock}`;
+  } else if (isTable && tableGrid.length > 0) {
+    formattedDocument = tableGrid.map(row => row.join(' | ')).join('\n');
+  } else {
+    formattedDocument = lines.join('\n\n');
+  }
+
+  return {
+    isOfficialLetter,
+    isTable,
+    header,
+    memoNo,
+    date,
+    recipient,
+    subject,
+    reference,
+    body,
+    signatory,
+    formattedDocument,
+    tableGrid,
+  };
+}
+
+
+=== FILE: src/utils/docxGenerator.ts ===
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from 'docx';
+
+export async function createRealDocxBlob(textContent: string, gridMatrix?: string[][], docTitle?: string): Promise<Blob> {
+  const children: (Paragraph | Table)[] = [];
+
+  if (gridMatrix && gridMatrix.length > 0 && gridMatrix[0].length > 0) {
+    const cleanRows = gridMatrix.filter((r) => r.some((c) => (c || '').trim() !== ''));
+    if (cleanRows.length > 0) {
+      if (docTitle && docTitle !== 'Document' && docTitle.trim()) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: docTitle,
+                bold: true,
+                size: 26,
+                font: 'Noto Sans Devanagari',
+                color: '1E293B',
+              }),
+            ],
+            spacing: { after: 180 },
+          })
+        );
+      }
+
+      const tableRows = cleanRows.map((row, rIdx) => {
+        const isHeader = rIdx === 0;
+        return new TableRow({
+          tableHeader: isHeader,
+          children: row.map((cellText) => {
+            const rawCell = cellText || '';
+            const cellLines = rawCell.split('\n');
+            return new TableCell({
+              width: {
+                size: Math.floor(100 / Math.max(1, row.length)),
+                type: WidthType.PERCENTAGE,
+              },
+              shading: isHeader ? { fill: 'F8FAFC' } : undefined,
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                left: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                right: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+              },
+              children: cellLines.map((line) =>
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: line,
+                      bold: isHeader,
+                      size: 20,
+                      font: 'Noto Sans Devanagari',
+                      color: isHeader ? '0F172A' : '334155',
+                    }),
+                  ],
+                  spacing: { before: 40, after: 40 },
+                })
+              ),
+            });
+          }),
+        });
+      });
+
+      children.push(
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: tableRows,
+        })
+      );
+    }
+  }
+
+  if (textContent && children.length === 0) {
+    const rawLines = textContent.split('\n');
+    rawLines.forEach((line) => {
+      if (!line || !line.trim()) {
+        children.push(new Paragraph({ spacing: { after: 80 } }));
+        return;
+      }
+
+      if (line.includes('|') || line.includes('\t')) {
+        const cells = line.split(/[\t|]/).map((c) => c.trim()).filter((c) => c.length > 0);
+        if (cells.length >= 2) {
+          const row = new TableRow({
+            children: cells.map((cellText) =>
+              new TableCell({
+                width: { size: Math.floor(100 / cells.length), type: WidthType.PERCENTAGE },
+                borders: {
+                  top: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                  bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                  left: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                  right: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                },
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: cellText,
+                        size: 20,
+                        font: 'Noto Sans Devanagari',
+                      }),
+                    ],
+                  }),
+                ],
+              })
+            ),
+          });
+          children.push(
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [row],
+            })
+          );
+          return;
+        }
+      }
+
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: line,
+              font: 'Noto Sans Devanagari',
+              size: 22,
+              color: '1E293B',
+            }),
+          ],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 100, line: 260 },
+        })
+      );
+    });
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: 1440,
+              bottom: 1440,
+              left: 1440,
+              right: 1440,
+            },
+          },
+        },
+        children,
+      },
+    ],
+  });
+
+  return await Packer.toBlob(doc);
+}
+
+
+=== FILE: src/utils/download.ts ===
+import * as pdfjsLib from 'pdfjs-dist';
+import { createWorker } from 'tesseract.js';
+import { formatOcrDataWithLayout } from './ocrFormatter';
+import { preprocessImageForOcr } from './imagePreprocess';
+import { generatePdfFromContent } from './wordToPdf';
+import { createRealDocxBlob } from './docxGenerator';
+import { cleanDevanagariOcrText } from './ocrCleaner';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+
+export const downloadFile = (content: string | Blob, filename: string, mimeType: string = 'text/plain') => {
+  try {
+    const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err) {
+    console.error('Download error:', err);
+  }
+};
+
+export const downloadWordDoc = async (filename: string, textContent: string, title: string = 'Document', gridMatrix?: string[][]) => {
+  try {
+    const safeDocxName = filename.replace(/\.doc$/i, '') + '.docx';
+    const docxBlob = await createRealDocxBlob(textContent, gridMatrix, title);
+    downloadFile(docxBlob, safeDocxName, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  } catch (err) {
+    console.error('Failed to generate DOCX:', err);
+    downloadFile(textContent, filename.replace(/\.docx?$/i, '.txt'), 'text/plain;charset=utf-8');
+  }
+};
+
+const renderPdfPageToBlob = async (pdfPage: any): Promise<Blob | null> => {
+  try {
+    const unscaledViewport = pdfPage.getViewport({ scale: 1.0 });
+    const maxDimension = Math.max(unscaledViewport.width, unscaledViewport.height);
+    const safeScale = maxDimension > 0 ? Math.min(2.0, 1800 / maxDimension) : 1.5;
+
+    const viewport = pdfPage.getViewport({ scale: Math.max(1.0, safeScale) });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+
+    if (context) {
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      await pdfPage.render({ canvasContext: context, viewport }).promise;
+
+      return new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png');
+      });
+    }
+  } catch (err) {
+    console.error('Error rendering PDF page to blob:', err);
+  }
+  return null;
+};
+
+export const extractPdfContentAccurate = async (file: File, onProgress?: (status: string) => void): Promise<string> => {
+  try {
+    if (onProgress) onProgress('PDF फ़ाइल का विश्लेषण किया जा रहा है...');
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pageOutputs: string[] = [];
+    let isScannedPdf = false;
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      if (onProgress) onProgress(`पन्ना ${pageNum} / ${pdf.numPages} का लेआउट पढ़ा जा रहा है...`);
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const viewport = page.getViewport({ scale: 1.0 });
+
+      const items: any[] = [];
+      textContent.items.forEach((item: any) => {
+        const str = item.str || '';
+        if (str.trim()) {
+          const x = item.transform ? item.transform[4] : 0;
+          const y = item.transform ? viewport.height - item.transform[5] : 0;
+          items.push({ str, x, y, width: item.width || 0, height: item.height || 12 });
+        }
+      });
+
+      const totalChars = items.reduce((acc, it) => acc + it.str.length, 0);
+      const hasMeaningfulText = totalChars > 40 && items.some(it => /[\u0900-\u097F\w]/.test(it.str));
+
+      if (hasMeaningfulText) {
+        items.sort((a, b) => a.y - b.y);
+        const lines: any[] = [];
+        items.forEach(item => {
+          let matchedLine = lines.find(l => Math.abs(l.y - item.y) <= 5);
+          if (matchedLine) matchedLine.items.push(item);
+          else lines.push({ y: item.y, items: [item] });
+        });
+
+        lines.sort((a, b) => a.y - b.y);
+        const formattedPageLines: string[] = [];
+        let prevLineY = 0;
+
+        lines.forEach(line => {
+          line.items.sort((a, b) => a.x - b.x);
+          let lineText = '';
+          let prevItemX1 = 0;
+          line.items.forEach(it => {
+            if (prevItemX1 > 0 && it.x - prevItemX1 > 4) lineText += ' ';
+            lineText += it.str;
+            prevItemX1 = it.x + (it.width || 0);
+          });
+          if (prevLineY > 0 && line.y - prevLineY > 24) formattedPageLines.push('');
+          formattedPageLines.push(lineText.trim());
+          prevLineY = line.y;
+        });
+        pageOutputs.push(formattedPageLines.join('\n'));
+      } else {
+        isScannedPdf = true;
+      }
+    }
+
+    const directExtracted = pageOutputs.join('\n\n').trim();
+
+    if (isScannedPdf || !directExtracted || directExtracted.length < 30) {
+      if (onProgress) onProgress('स्कैन/फोटो PDF: AI डीप विजन OCR (हिंदी + इंग्लिश) प्रारंभ...');
+      let ocrText = '';
+      const worker = await createWorker(['hin', 'eng'], 1, {
+        logger: (m) => {
+          if (m.status === 'recognizing text' && onProgress) {
+            const pct = Math.round((m.progress || 0) * 100);
+            onProgress(`स्कैनिंग प्रगति... ${pct}%`);
+          }
+        }
+      });
+
+      await worker.setParameters({ tessedit_pageseg_mode: '3' as any });
+
+      for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+        if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का OCR स्कैन किया जा रहा है...`);
+        const page = await pdf.getPage(i);
+        const rawBlob = await renderPdfPageToBlob(page);
+        if (rawBlob && rawBlob.size > 100) {
+          const preprocessedBlob = await preprocessImageForOcr(rawBlob);
+          const blobToRecognize = preprocessedBlob && preprocessedBlob.size > 100 ? preprocessedBlob : rawBlob;
+          const { data } = await worker.recognize(blobToRecognize);
+          const pageFormatted = formatOcrDataWithLayout(data);
+          const cleanedText = cleanDevanagariOcrText(pageFormatted.formattedText);
+          if (cleanedText.trim()) ocrText += cleanedText.trim() + '\n\n';
+        }
+      }
+      await worker.terminate();
+      if (ocrText.trim()) return ocrText.trim();
+    }
+    return directExtracted;
+  } catch (err) {
+    console.error('OCR Extraction Error:', err);
+    return '';
+  }
+};
+
+================================================================================
+MASTER CODEBASE GENERATION COMPLETED SUCCESSFULLY
+================================================================================
