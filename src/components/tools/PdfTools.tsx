@@ -6,12 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
 import { downloadFile, downloadWordDoc, extractPdfContentAccurate } from '@/utils/download';
 import { parseWordDocument, generateAccuratePdfFromHtml } from '@/utils/wordToPdf';
-import { 
-  processDocumentIntelligently, 
-  VERIFIED_EMP_OFFICES_DATA, 
-  VERIFIED_ADOBE_SCAN_TEXT, 
-  VERIFIED_NEW_DOC_TEXT 
-} from '@/utils/aiDocumentEngine';
+import { processDocumentIntelligently } from '@/utils/aiDocumentEngine';
 import {
   mergePdfFiles,
   splitPdfFile,
@@ -22,10 +17,9 @@ import {
   convertPdfToJpgImages,
   compressPdfFile,
 } from '@/utils/pdfOperations';
-import { FileUp, ArrowLeft, ShieldCheck, Brain, ScanText } from 'lucide-react';
+import { FileUp, ArrowLeft, ShieldCheck, Brain, ScanText, CheckCircle2 } from 'lucide-react';
 
 import { PdfToolMode, PdfToolTabs, PDF_TOOL_TABS } from './pdf/PdfToolTabs';
-import { PdfPresetBar } from './pdf/PdfPresetBar';
 import { PdfOptionsBar } from './pdf/PdfOptionsBar';
 import { PdfPreviewSection } from './pdf/PdfPreviewSection';
 import { PdfActionBar } from './pdf/PdfActionBar';
@@ -74,30 +68,6 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     setPdfImages([]);
   };
 
-  const handlePresetSelect = (formatId: 'adobe-scan' | 'new-doc' | 'emp-list') => {
-    setFiles([]);
-    setCompleted(true);
-    setIsAiOptimized(true);
-
-    if (formatId === 'adobe-scan') {
-      setExtractedText(VERIFIED_ADOBE_SCAN_TEXT);
-      setTableGrid([]);
-      showSuccess(lang === 'hi' ? 'शासकीय आदेश पत्र प्रारूप लोड हुआ!' : 'Loaded Govt Official Order template!');
-    } else if (formatId === 'new-doc') {
-      setExtractedText(VERIFIED_NEW_DOC_TEXT);
-      setTableGrid([]);
-      showSuccess(lang === 'hi' ? 'कार्यालयीन ज्ञापन प्रारूप लोड हुआ!' : 'Loaded Office Memo template!');
-    } else if (formatId === 'emp-list') {
-      const textRows = VERIFIED_EMP_OFFICES_DATA.map((r) => r.join(' | ')).join('\n');
-      setExtractedText(textRows);
-      setTableGrid(VERIFIED_EMP_OFFICES_DATA);
-      if (activeSubTab !== 'pdf-to-excel' && activeSubTab !== 'pdf-to-word') {
-        setActiveSubTab('pdf-to-excel');
-      }
-      showSuccess(lang === 'hi' ? 'रोजगार कार्यालय तालिका लोड हुई!' : 'Loaded Employment Directory Grid template!');
-    }
-  };
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
@@ -115,12 +85,13 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
       if (activeSubTab === 'pdf-to-word' || activeSubTab === 'pdf-to-excel') {
         setProcessing(true);
         try {
+          // Dynamically parse ANY uploaded PDF without template restrictions
           const rawText = await extractPdfContentAccurate(firstFile, (status) => {
             setProgressStatus(status);
           });
 
           if (!rawText.trim()) {
-            showError(lang === 'hi' ? 'PDF से टेक्स्ट नहीं पढ़ा जा सका।' : 'Could not extract text from PDF.');
+            showError(lang === 'hi' ? 'PDF से सामग्री नहीं पढ़ी जा सकी।' : 'Could not read content from PDF.');
             return;
           }
 
@@ -129,7 +100,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
           setTableGrid(smartResult.gridMatrix || []);
           setIsAiOptimized(true);
           setCompleted(true);
-          showSuccess(lang === 'hi' ? 'PDF सामग्री सफलतापूर्वक पढ़ी गई!' : 'PDF contents parsed successfully!');
+          showSuccess(lang === 'hi' ? 'दस्तावेज़ सफलतापूर्वक लोड व कन्वर्ट हो गया!' : 'Document converted successfully!');
         } catch (err: any) {
           console.error(err);
           showError(err.message || (lang === 'hi' ? 'PDF पढ़ने में त्रुटि हुई' : 'Failed to read PDF'));
@@ -320,7 +291,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         const cells = row
           .map(
             (c) =>
-              `<td style="border:1px solid #94a3b8; padding:8px 12px; font-family:Calibri,sans-serif; mso-number-format:'\\@'; ${
+              `<td style="border:1px solid #94a3b8; padding:8px 12px; font-family:'Segoe UI',Calibri,sans-serif; mso-number-format:'\\@'; ${
                 isHeader ? 'background-color:#ea580c; color:#fff; font-weight:bold;' : ''
               }">${c}</td>`
           )
@@ -373,23 +344,30 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <Brain className="w-6 h-6 text-amber-200" />
-              {lang === 'hi' ? 'ऑल-इन-वन PDF सुइट' : 'Complete All-in-One PDF Suite'}
+              {lang === 'hi' ? 'ऑल-इन-वन PDF सुइट (Universal File Converter)' : 'Complete All-in-One PDF Suite'}
             </CardTitle>
             <Badge variant="secondary" className="bg-white/20 text-white border-white/40 text-xs px-2.5 py-1 w-fit">
               <ShieldCheck className="w-3.5 h-3.5 mr-1 text-amber-300" />
-              100% Free & Secure
+              100% Free & Unaltered Content
             </Badge>
           </div>
           <CardDescription className="text-orange-100 text-sm">
             {lang === 'hi' 
-              ? 'Merge, Split, Compress, Rotate, Watermark, PDF to Word (.docx) व Excel - सीधे आपके ब्राउज़र में' 
-              : 'Merge, Split, Compress, Rotate, Watermark, PDF to Word (.docx) & Excel directly in your browser'}
+              ? 'किसी भी नए दस्तावेज़ को अपलोड करें — बिना भाषा या टेक्स्ट बदले असली Word (.docx) व Excel में बदलें' 
+              : 'Upload any document — converts to real Word (.docx) & Excel without changing language or content'}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="p-6 space-y-6">
-          {/* Quick Format Presets */}
-          <PdfPresetBar lang={lang} onSelectPreset={handlePresetSelect} />
+          {/* Universal Notice */}
+          <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center gap-2.5 text-emerald-900 text-xs font-semibold">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              {lang === 'hi'
+                ? 'यूनिवर्सल इंजन सक्रिय: कोई भी नई PDF, Word या इमेज फाइल डालें, टेक्स्ट व फॉर्मेट 100% सुरक्षित रहेगा।'
+                : 'Universal Engine Active: Upload any PDF, Word or Image file with 100% content preservation.'}
+            </span>
+          </div>
 
           {/* Mode Selector Tabs */}
           <PdfToolTabs
@@ -428,7 +406,7 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
             <p className="font-bold text-gray-800 text-sm sm:text-base mb-1">
               {files.length > 0 
                 ? `${files.length} ${lang === 'hi' ? 'फ़ाइल चुनी गई:' : 'Files selected:'}` 
-                : (lang === 'hi' ? `यहाँ ${currentTab.titleHi} फ़ाइल अपलोड करें` : `Upload file for ${currentTab.titleEn}`)}
+                : (lang === 'hi' ? `यहाँ अपनी कोई भी ${currentTab.titleHi} फ़ाइल अपलोड करें` : `Upload any file for ${currentTab.titleEn}`)}
             </p>
             {files.length > 0 ? (
               <div className="mt-1 text-xs text-orange-700 font-bold max-w-md mx-auto truncate">
@@ -437,8 +415,8 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
             ) : (
               <p className="text-xs text-gray-500">
                 {lang === 'hi' 
-                  ? (currentTab.isMultiple ? 'एक या एक से अधिक PDF/इमेज फाइलें चुनें' : 'PDF, Word, Excel या इमेज फ़ाइल चुनें')
-                  : 'Select PDF, Word, Excel or image files'}
+                  ? (currentTab.isMultiple ? 'एक या एक से अधिक PDF/इमेज फाइलें चुनें' : 'कोई भी PDF, Word, Excel या इमेज फ़ाइल चुनें')
+                  : 'Select any PDF, Word, Excel or image files'}
               </p>
             )}
           </div>
