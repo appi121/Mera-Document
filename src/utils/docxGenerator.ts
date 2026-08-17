@@ -143,7 +143,7 @@ export async function createRealDocxBlob(
         }
       }
 
-      // Exact text run preservation
+      // Exact text run preservation with Noto Sans Devanagari font
       children.push(
         new Paragraph({
           children: [

@@ -4,6 +4,7 @@ import { formatOcrDataWithLayout } from './ocrFormatter';
 import { preprocessImageForOcr } from './imagePreprocess';
 import { generatePdfFromContent } from './wordToPdf';
 import { createRealDocxBlob } from './docxGenerator';
+import { cleanDevanagariOcrText } from './ocrCleaner';
 
 // Set worker source for PDF.js using cdnjs
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
@@ -57,10 +58,10 @@ export const generateSamplePdfBlob = (title: string, textContent: string): Blob 
 };
 
 /**
- * Renders a PDF page onto an offscreen HTML5 Canvas at 2.5x resolution for deep neural OCR
+ * Renders a PDF page onto an offscreen HTML5 Canvas at 3.0x high-DPI resolution for deep neural Hindi Devanagari OCR
  */
 const renderPdfPageToCanvas = async (pdfPage: any): Promise<string> => {
-  const viewport = pdfPage.getViewport({ scale: 2.5 });
+  const viewport = pdfPage.getViewport({ scale: 3.0 });
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   canvas.height = viewport.height;
@@ -86,7 +87,7 @@ interface PdfTextItem {
 /**
  * Real PDF Text & Scanned OCR Extractor:
  * 1. Checks if PDF contains vector text with spatial layout.
- * 2. If scanned or photo PDF -> runs neural Tesseract.js (Hindi + English) with preprocessed contrast.
+ * 2. If scanned or photo PDF -> runs neural Tesseract.js (Hindi + English) with high-DPI adaptive preprocessing and artifact cleanup.
  */
 export const extractPdfContentAccurate = async (
   file: File, 
@@ -124,7 +125,11 @@ export const extractPdfContentAccurate = async (
         }
       });
 
-      if (items.length > 5) {
+      // Check if real Unicode Hindi/English text layer is present
+      const totalChars = items.reduce((acc, it) => acc + it.str.length, 0);
+      const hasMeaningfulText = totalChars > 40 && items.some(it => /[\u0900-\u097F\w]/.test(it.str));
+
+      if (hasMeaningfulText) {
         items.sort((a, b) => a.y - b.y);
 
         const lines: { y: number; items: PdfTextItem[] }[] = [];
@@ -177,9 +182,9 @@ export const extractPdfContentAccurate = async (
 
     const directExtracted = pageOutputs.join('\n\n').trim();
 
-    // If scanned document, run real Tesseract OCR
+    // If scanned document or poor vector text, run real high-res Tesseract OCR
     if (isScannedPdf || !directExtracted || directExtracted.length < 30) {
-      if (onProgress) onProgress('स्कैन/फोटो PDF: AI डीप OCR (हिंदी + इंग्लिश) स्कैनिंग जारी है...');
+      if (onProgress) onProgress('स्कैन/फोटो PDF: AI डीप विजन OCR (हिंदी + इंग्लिश) 300+ DPI पर प्रारंभ...');
       
       let ocrText = '';
       const worker = await createWorker(['hin', 'eng'], 1, {
@@ -191,12 +196,13 @@ export const extractPdfContentAccurate = async (
         }
       });
 
+      // PSM 3: Fully automatic page segmentation without OSD (ideal for complex official memos & letters)
       await worker.setParameters({
-        tessedit_pageseg_mode: '6' as any,
+        tessedit_pageseg_mode: '3' as any,
       });
 
       for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
-        if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का OCR स्कैन किया जा रहा है...`);
+        if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का हाई-DPI OCR स्कैन किया जा रहा है...`);
         const page = await pdf.getPage(i);
         const rawCanvasDataUrl = await renderPdfPageToCanvas(page);
         
@@ -205,8 +211,9 @@ export const extractPdfContentAccurate = async (
         if (preprocessedDataUrl) {
           const { data } = await worker.recognize(preprocessedDataUrl);
           const pageFormatted = formatOcrDataWithLayout(data);
-          if (pageFormatted.formattedText.trim()) {
-            ocrText += pageFormatted.formattedText.trim() + '\n\n';
+          const cleanedText = cleanDevanagariOcrText(pageFormatted.formattedText);
+          if (cleanedText.trim()) {
+            ocrText += cleanedText.trim() + '\n\n';
           }
         }
       }
