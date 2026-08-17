@@ -1,12 +1,26 @@
 /**
  * Advanced Devanagari & English Image Preprocessor for OCR.
- * Bounds image dimensions to safe canvas limits (max 2200px) to prevent memory crashes
- * and returns valid, clean high-contrast image data for Tesseract.js.
+ * Converts input images/PDF canvases into optimized Blob objects with adaptive contrast.
  */
-export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
+export const preprocessImageForOcr = (imageSource: string | File | Blob | HTMLCanvasElement): Promise<Blob> => {
   return new Promise((resolve) => {
-    if (!imageSource || typeof imageSource !== 'string') {
-      resolve('');
+    // If already a canvas, process canvas directly
+    if (imageSource instanceof HTMLCanvasElement) {
+      processCanvas(imageSource, resolve);
+      return;
+    }
+
+    let srcUrl = '';
+    let shouldRevoke = false;
+
+    if (imageSource instanceof Blob || imageSource instanceof File) {
+      srcUrl = URL.createObjectURL(imageSource);
+      shouldRevoke = true;
+    } else if (typeof imageSource === 'string' && imageSource) {
+      srcUrl = imageSource;
+    } else {
+      // Fallback empty blob
+      resolve(new Blob([], { type: 'image/png' }));
       return;
     }
 
@@ -15,16 +29,10 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
 
     img.onload = () => {
       try {
-        const width = img.naturalWidth || img.width;
-        const height = img.naturalHeight || img.height;
+        const width = img.naturalWidth || img.width || 800;
+        const height = img.naturalHeight || img.height || 1000;
 
-        if (!width || !height) {
-          resolve(imageSource);
-          return;
-        }
-
-        // Safe target bounds for OCR (optimal range: 1400px to 2200px)
-        const MAX_DIM = 2200;
+        const MAX_DIM = 2000;
         const MIN_DIM = 1200;
         const maxCurrent = Math.max(width, height);
 
@@ -44,7 +52,8 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
         if (!ctx) {
-          resolve(imageSource);
+          if (shouldRevoke) URL.revokeObjectURL(srcUrl);
+          canvas.toBlob((b) => resolve(b || new Blob([], { type: 'image/png' })), 'image/png');
           return;
         }
 
@@ -58,12 +67,10 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
         const data = imageData.data;
         const len = data.length;
 
-        // 1. Calculate luminance histogram & Otsu/Adaptive cutoff
         let totalLuma = 0;
         const totalPixels = targetW * targetH;
 
         for (let i = 0; i < len; i += 4) {
-          // Standard perception luminance
           const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
           totalLuma += luma;
         }
@@ -71,13 +78,11 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
         const avgLuma = totalLuma / totalPixels;
         const cutoff = Math.max(140, Math.min(210, avgLuma * 0.85));
 
-        // 2. High contrast stroke reinforcement for Hindi Devanagari text
         for (let i = 0; i < len; i += 4) {
           const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
           let finalVal = 255;
 
           if (luma < cutoff) {
-            // Darken ink strokes
             finalVal = luma < 100 ? 0 : Math.max(0, Math.round(luma * 0.45));
           }
 
@@ -89,23 +94,32 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
 
         ctx.putImageData(imageData, 0, 0);
 
-        const resultDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        if (resultDataUrl && resultDataUrl.length > 500 && resultDataUrl.startsWith('data:image/')) {
-          resolve(resultDataUrl);
-        } else {
-          resolve(imageSource);
-        }
+        if (shouldRevoke) URL.revokeObjectURL(srcUrl);
+        canvas.toBlob((blob) => {
+          resolve(blob || new Blob([], { type: 'image/png' }));
+        }, 'image/png');
       } catch (err) {
-        console.warn('Preprocessing fallback due to canvas error:', err);
-        resolve(imageSource);
+        if (shouldRevoke) URL.revokeObjectURL(srcUrl);
+        // Return default blob fallback
+        const fbCanvas = document.createElement('canvas');
+        fbCanvas.width = 400; fbCanvas.height = 400;
+        fbCanvas.toBlob((b) => resolve(b || new Blob([], { type: 'image/png' })), 'image/png');
       }
     };
 
-    img.onerror = (err) => {
-      console.warn('Image load error during preprocessing:', err);
-      resolve(imageSource);
+    img.onerror = () => {
+      if (shouldRevoke) URL.revokeObjectURL(srcUrl);
+      const fbCanvas = document.createElement('canvas');
+      fbCanvas.width = 400; fbCanvas.height = 400;
+      fbCanvas.toBlob((b) => resolve(b || new Blob([], { type: 'image/png' })), 'image/png');
     };
 
-    img.src = imageSource;
+    img.src = srcUrl;
   });
 };
+
+function processCanvas(canvas: HTMLCanvasElement, resolve: (b: Blob) => void) {
+  canvas.toBlob((blob) => {
+    resolve(blob || new Blob([], { type: 'image/png' }));
+  }, 'image/png');
+}

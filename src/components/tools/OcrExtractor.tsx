@@ -73,11 +73,9 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     setStatusText(lang === 'hi' ? 'फोटो का कंट्रास्ट व रिज़ॉल्यूशन बढ़ाया जा रहा है...' : 'Enhancing image quality...');
 
     try {
-      const targetSource = file ? URL.createObjectURL(file) : previewUrl || '';
-      const enhancedImageDataUrl = await preprocessImageForOcr(targetSource);
-      const finalImage = (enhancedImageDataUrl && enhancedImageDataUrl.startsWith('data:image/')) 
-        ? enhancedImageDataUrl 
-        : targetSource;
+      const inputSource = file ? file : previewUrl || '';
+      const enhancedBlob = await preprocessImageForOcr(inputSource);
+      const blobToRecognize = enhancedBlob && enhancedBlob.size > 100 ? enhancedBlob : file!;
 
       setStatusText(lang === 'hi' ? 'AI भाषा मॉडल (हिंदी + इंग्लिश) चालू हो रहा है...' : 'Initializing OCR Engine...');
 
@@ -96,7 +94,7 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 
       setStatusText(lang === 'hi' ? 'दस्तावेज़ की पंक्तियों व लेआउट का संरेखण हो रहा है...' : 'Aligning document layout...');
       
-      const { data } = await worker.recognize(finalImage);
+      const { data } = await worker.recognize(blobToRecognize);
       await worker.terminate();
 
       const result = formatOcrDataWithLayout(data);

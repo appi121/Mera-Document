@@ -100,11 +100,13 @@ export const AiDocumentStudio: React.FC<AiDocumentStudioProps> = ({ lang, onBack
     setStatusText(lang === 'hi' ? 'AI डीप विजन: दस्तावेज़ पढ़ा जा रहा है...' : 'AI Deep Vision: Scanning document...');
 
     try {
-      const enhancedImageDataUrl = await preprocessImageForOcr(url);
+      const enhancedBlob = await preprocessImageForOcr(selectedFile);
+      const blobToRecognize = enhancedBlob && enhancedBlob.size > 100 ? enhancedBlob : selectedFile;
+
       const worker = await createWorker(['hin', 'eng'], 1);
       await worker.setParameters({ tessedit_pageseg_mode: '6' as any });
 
-      const { data } = await worker.recognize(enhancedImageDataUrl);
+      const { data } = await worker.recognize(blobToRecognize);
       await worker.terminate();
 
       const result = formatOcrDataWithLayout(data);

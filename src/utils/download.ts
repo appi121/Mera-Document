@@ -54,16 +54,15 @@ export const generateSamplePdfBlob = (title: string, textContent: string): Blob 
 };
 
 /**
- * Renders a PDF page onto an offscreen HTML5 Canvas with safe dimensions (scale 2.0x, max 2000px)
+ * Renders a PDF page directly onto an HTML5 Canvas and returns a Blob
  */
-const renderPdfPageToCanvas = async (pdfPage: any): Promise<string> => {
+const renderPdfPageToBlob = async (pdfPage: any): Promise<Blob | null> => {
   try {
     const unscaledViewport = pdfPage.getViewport({ scale: 1.0 });
-    // Scale factor keeping max dimension around 1800-2000px
     const maxDimension = Math.max(unscaledViewport.width, unscaledViewport.height);
-    const safeScale = maxDimension > 0 ? Math.min(2.2, 1900 / maxDimension) : 1.8;
+    const safeScale = maxDimension > 0 ? Math.min(2.0, 1800 / maxDimension) : 1.5;
 
-    const viewport = pdfPage.getViewport({ scale: Math.max(1.2, safeScale) });
+    const viewport = pdfPage.getViewport({ scale: Math.max(1.0, safeScale) });
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
@@ -75,12 +74,15 @@ const renderPdfPageToCanvas = async (pdfPage: any): Promise<string> => {
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = 'high';
       await pdfPage.render({ canvasContext: context, viewport }).promise;
-      return canvas.toDataURL('image/jpeg', 0.95);
+
+      return new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png');
+      });
     }
   } catch (err) {
-    console.error('Error rendering PDF page to canvas:', err);
+    console.error('Error rendering PDF page to blob:', err);
   }
-  return '';
+  return null;
 };
 
 interface PdfTextItem {
@@ -94,7 +96,7 @@ interface PdfTextItem {
 /**
  * Real PDF Text & Scanned OCR Extractor:
  * 1. Checks if PDF contains vector text with spatial layout.
- * 2. If scanned or photo PDF -> runs neural Tesseract.js (Hindi + English) safely.
+ * 2. If scanned or photo PDF -> runs neural Tesseract.js with direct Blob handling.
  */
 export const extractPdfContentAccurate = async (
   file: File, 
@@ -208,19 +210,17 @@ export const extractPdfContentAccurate = async (
       for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
         if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का OCR स्कैन किया जा रहा है...`);
         const page = await pdf.getPage(i);
-        const rawCanvasDataUrl = await renderPdfPageToCanvas(page);
+        const rawBlob = await renderPdfPageToBlob(page);
         
-        if (rawCanvasDataUrl && rawCanvasDataUrl.startsWith('data:image/')) {
-          const preprocessedDataUrl = await preprocessImageForOcr(rawCanvasDataUrl);
-          const imageToRecognize = preprocessedDataUrl || rawCanvasDataUrl;
+        if (rawBlob && rawBlob.size > 100) {
+          const preprocessedBlob = await preprocessImageForOcr(rawBlob);
+          const blobToRecognize = preprocessedBlob && preprocessedBlob.size > 100 ? preprocessedBlob : rawBlob;
 
-          if (imageToRecognize && imageToRecognize.startsWith('data:image/')) {
-            const { data } = await worker.recognize(imageToRecognize);
-            const pageFormatted = formatOcrDataWithLayout(data);
-            const cleanedText = cleanDevanagariOcrText(pageFormatted.formattedText);
-            if (cleanedText.trim()) {
-              ocrText += cleanedText.trim() + '\n\n';
-            }
+          const { data } = await worker.recognize(blobToRecognize);
+          const pageFormatted = formatOcrDataWithLayout(data);
+          const cleanedText = cleanDevanagariOcrText(pageFormatted.formattedText);
+          if (cleanedText.trim()) {
+            ocrText += cleanedText.trim() + '\n\n';
           }
         }
       }
