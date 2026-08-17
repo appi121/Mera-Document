@@ -23,7 +23,8 @@ import {
   Trash2,
   Brain,
   ShieldCheck,
-  Bot
+  Bot,
+  AlertTriangle
 } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 
@@ -37,6 +38,8 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [structuredTableData, setStructuredTableData] = useState<string[][]>([]);
+  const [cellConfidences, setCellConfidences] = useState<number[][]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [copied, setCopied] = useState(false);
@@ -49,10 +52,14 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       setPreviewUrl(url);
       setExtractedText('');
       setStructuredTableData([]);
+      setCellConfidences([]);
+      setWarnings([]);
     } else {
       setPreviewUrl(null);
       setExtractedText('');
       setStructuredTableData([]);
+      setCellConfidences([]);
+      setWarnings([]);
     }
   };
 
@@ -94,6 +101,8 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       if (result.formattedText.trim()) {
         setExtractedText(result.formattedText);
         setStructuredTableData(result.gridMatrix);
+        setCellConfidences(result.cellConfidences);
+        setWarnings(result.warnings);
         showSuccess(lang === 'hi' ? 'फोटो से टेक्स्ट सफलतापूर्वक निकल गया!' : 'Text extracted successfully!');
       } else {
         setExtractedText(
@@ -123,6 +132,17 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     });
     setStructuredTableData(updated);
 
+    // Update confidence to 100 since user manually verified/edited it
+    const updatedConf = cellConfidences.map((row, r) => {
+      if (r === rIdx) {
+        const newRow = [...row];
+        newRow[cIdx] = 100;
+        return newRow;
+      }
+      return row;
+    });
+    setCellConfidences(updatedConf);
+
     const textLines = updated.map(row => row.filter(Boolean).join(' | '));
     setExtractedText(textLines.join('\n\n'));
   };
@@ -130,11 +150,12 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
   const handleAddRow = () => {
     const colsCount = structuredTableData[0]?.length || 6;
     setStructuredTableData([...structuredTableData, Array(colsCount).fill('')]);
+    setCellConfidences([...cellConfidences, Array(colsCount).fill(100)]);
   };
 
   const handleRemoveRow = (rIdx: number) => {
-    const updated = structuredTableData.filter((_, idx) => idx !== rIdx);
-    setStructuredTableData(updated);
+    setStructuredTableData(structuredTableData.filter((_, idx) => idx !== rIdx));
+    setCellConfidences(cellConfidences.filter((_, idx) => idx !== rIdx));
   };
 
   const handleCopy = () => {
@@ -189,6 +210,13 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     showSuccess(lang === 'hi' ? 'एक्सेल (.xls) डाउनलोड हुई!' : 'Excel downloaded!');
   };
 
+  const getCellBgColor = (confidence: number, text: string) => {
+    if (!text) return 'bg-white';
+    if (text.includes('[Needs verification]')) return 'bg-red-50 border-red-300';
+    if (confidence < 60) return 'bg-amber-50 border-amber-300';
+    return 'bg-white';
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <Button variant="ghost" onClick={onBack} className="mb-4 gap-2 text-gray-600 hover:text-gray-900">
@@ -217,6 +245,23 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
         </CardHeader>
 
         <CardContent className="p-6 space-y-6">
+          {/* Warnings / Verification Alerts */}
+          {warnings.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 text-amber-900">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-xs sm:text-sm">
+                  {lang === 'hi' ? 'सत्यापन आवश्यक (Verification Required):' : 'Verification Required:'}
+                </p>
+                <p className="text-xs text-amber-800 mt-1">
+                  {lang === 'hi' 
+                    ? 'कुछ सेल्स में कम स्पष्टता के कारण [Needs verification] मार्क किया गया है। कृपया नीचे ग्रिड में जांचें।' 
+                    : 'Some cells have low confidence and are marked with [Needs verification]. Please verify below.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Upload Column */}
             <div className="lg:col-span-5 space-y-4">
@@ -266,19 +311,19 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
 
             {/* Right Output Column */}
             <div className="lg:col-span-7 space-y-3">
-              <Tabs defaultValue="text-view" className="w-full">
+              <Tabs defaultValue="table-view" className="w-full">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
                   <TabsList className="bg-orange-50 border border-orange-200">
-                    <TabsTrigger value="text-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
-                      <FileText className="w-3.5 h-3.5" />
-                      {lang === 'hi' ? 'डॉक्यूमेंट लेआउट' : 'Document View'}
-                    </TabsTrigger>
                     {structuredTableData.length > 0 && (
                       <TabsTrigger value="table-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
                         <Table className="w-3.5 h-3.5" />
                         {lang === 'hi' ? 'एक्सेल टेबल ग्रिड' : 'Excel Grid View'}
                       </TabsTrigger>
                     )}
+                    <TabsTrigger value="text-view" className="text-xs gap-1.5 data-[state=active]:bg-orange-600 data-[state=active]:text-white">
+                      <FileText className="w-3.5 h-3.5" />
+                      {lang === 'hi' ? 'डॉक्यूमेंट लेआउट' : 'Document View'}
+                    </TabsTrigger>
                   </TabsList>
 
                   {extractedText && (
@@ -311,24 +356,27 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                   />
                 </TabsContent>
 
-                {structuredTableData.length > 0 && (
-                  <TabsContent value="table-view">
+                <TabsContent value="table-view">
+                  {structuredTableData.length > 0 ? (
                     <div className="border border-orange-200 rounded-xl overflow-x-auto h-[360px] bg-white p-2 relative flex flex-col justify-between shadow-inner">
                       <div className="overflow-auto h-full">
                         <table className="w-full text-xs text-left border-collapse font-sans min-w-[750px]">
                           <tbody>
                             {structuredTableData.map((row, rIdx) => (
                               <tr key={rIdx} className={rIdx === 0 ? 'bg-orange-600 text-white font-bold' : rIdx % 2 === 0 ? 'bg-orange-50/30' : 'bg-white'}>
-                                {row.map((cell, cIdx) => (
-                                  <td key={cIdx} className="border border-slate-300 p-2 vertical-top">
-                                    <textarea
-                                      rows={2}
-                                      value={cell}
-                                      onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
-                                      className={`w-full bg-transparent px-1.5 py-1 text-xs font-medium focus:outline-none focus:bg-orange-100 rounded resize-y ${rIdx === 0 ? 'text-white placeholder-white/80 font-bold' : 'text-slate-800'}`}
-                                    />
-                                  </td>
-                                ))}
+                                {row.map((cell, cIdx) => {
+                                  const confidence = cellConfidences[rIdx]?.[cIdx] ?? 100;
+                                  return (
+                                    <td key={cIdx} className={`border border-slate-300 p-1.5 vertical-top ${getCellBgColor(confidence, cell)}`}>
+                                      <textarea
+                                        rows={2}
+                                        value={cell}
+                                        onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
+                                        className={`w-full bg-transparent px-1.5 py-1 text-xs font-medium focus:outline-none focus:bg-orange-100 rounded resize-y ${rIdx === 0 ? 'text-white placeholder-white/80 font-bold' : 'text-slate-800'}`}
+                                      />
+                                    </td>
+                                  );
+                                })}
                                 <td className="p-1 text-center w-8">
                                   <button
                                     onClick={() => handleRemoveRow(rIdx)}
@@ -351,8 +399,15 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
                         </Button>
                       </div>
                     </div>
-                  </TabsContent>
-                )}
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-[360px] border border-dashed border-orange-200 rounded-xl bg-orange-50/20 text-gray-400">
+                      <Table className="w-12 h-12 text-orange-200 mb-2" />
+                      <p className="text-xs">
+                        {lang === 'hi' ? 'फोटो अपलोड करके "फोटो से टेक्स्ट निकालें" दबाएं...' : 'Upload photo and click extract...'}
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
               </Tabs>
             </div>
           </div>
