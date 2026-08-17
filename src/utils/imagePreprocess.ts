@@ -1,7 +1,7 @@
 /**
- * Deep Vision Adaptive Image Preprocessor for Hindi Devanagari & English OCR.
- * Upscales DPI to 300+ DPI, removes yellowish paper shadows, sharpens Hindi matras,
- * and performs Sauvola-like local adaptive contrast normalization.
+ * Advanced Soft-Contrast Image Preprocessor for Hindi Devanagari & English Documents.
+ * Preserves continuous stroke connectivity, Hindi shirorekha, matras, and dots
+ * without harsh binary clipping that creates symbol artifacts.
  */
 export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
   return new Promise((resolve) => {
@@ -15,9 +15,9 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
         return;
       }
 
-      // Upscale resolution to minimum 2600px width/height for maximum Devanagari ligatures and matras
+      // Upscale DPI to 3.0x for crisp recognition of Devanagari ligatures
       const maxDim = Math.max(img.width, img.height);
-      const scale = maxDim < 1500 ? 2.5 : maxDim < 2200 ? 1.8 : 1.4;
+      const scale = maxDim < 1400 ? 3.0 : maxDim < 2200 ? 2.0 : 1.5;
 
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
@@ -31,33 +31,37 @@ export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
       const w = canvas.width;
       const h = canvas.height;
 
-      // 1. Convert to high-contrast grayscale luminance
-      const gray = new Uint8Array(w * h);
+      // 1. Convert to high-definition luminance map
+      const gray = new Float32Array(w * h);
+      let minLuma = 255;
+      let maxLuma = 0;
+
       for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        // Standard Rec. 709 luma
-        gray[j] = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+        // High accuracy luminance
+        const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        gray[j] = luma;
+        if (luma < minLuma) minLuma = luma;
+        if (luma > maxLuma) maxLuma = luma;
       }
 
-      // 2. Compute background luminosity to eliminate shadows & aged paper tint
-      let totalLuma = 0;
-      for (let i = 0; i < gray.length; i++) {
-        totalLuma += gray[i];
-      }
-      const avgLuma = totalLuma / gray.length;
-      const threshold = Math.max(160, Math.min(215, avgLuma * 0.88));
+      // 2. Soft Sigmoid Contrast Stretching (Keeps ink black and cleans yellow/grey background)
+      const range = Math.max(1, maxLuma - minLuma);
+      const midpoint = minLuma + range * 0.55;
 
-      // 3. Adaptive thresholding & ink reinforcement
       for (let i = 0, j = 0; i < data.length; i += 4, j++) {
         const val = gray[j];
-        let finalVal = 255; // default white background
-
-        if (val < threshold) {
-          // Boost dark ink for crisp Hindi Devanagari characters
-          finalVal = val < 110 ? 0 : Math.max(0, Math.round(val * 0.4));
+        
+        // Soft curve that enhances text strokes while gently removing background shadow
+        let normalized = (val - minLuma) / range;
+        
+        // Enhance ink density without breaking thin matras
+        if (val < midpoint) {
+          normalized = Math.pow(normalized, 1.4); // Darken text
+        } else {
+          normalized = Math.min(1.0, normalized * 1.15); // Lighten paper background
         }
+
+        const finalVal = Math.max(0, Math.min(255, Math.round(normalized * 255)));
 
         data[i] = finalVal;
         data[i + 1] = finalVal;

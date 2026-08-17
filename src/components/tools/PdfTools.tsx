@@ -3,10 +3,11 @@ import { Language } from '@/types/document';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
 import { downloadFile, downloadWordDoc, extractPdfContentAccurate } from '@/utils/download';
 import { parseWordDocument, generateAccuratePdfFromHtml } from '@/utils/wordToPdf';
-import { processDocumentIntelligently } from '@/utils/aiDocumentEngine';
+import { reconstructDocumentLayout } from '@/utils/documentReconstructor';
 import {
   mergePdfFiles,
   splitPdfFile,
@@ -17,12 +18,25 @@ import {
   convertPdfToJpgImages,
   compressPdfFile,
 } from '@/utils/pdfOperations';
-import { FileUp, ArrowLeft, ShieldCheck, Brain, ScanText, CheckCircle2 } from 'lucide-react';
+import { 
+  FileUp, 
+  ArrowLeft, 
+  ShieldCheck, 
+  Brain, 
+  ScanText, 
+  CheckCircle2, 
+  Sparkles, 
+  Download, 
+  FileSpreadsheet, 
+  Copy, 
+  Check, 
+  Wand2,
+  FileText,
+  Eye
+} from 'lucide-react';
 
 import { PdfToolMode, PdfToolTabs, PDF_TOOL_TABS } from './pdf/PdfToolTabs';
 import { PdfOptionsBar } from './pdf/PdfOptionsBar';
-import { PdfPreviewSection } from './pdf/PdfPreviewSection';
-import { PdfActionBar } from './pdf/PdfActionBar';
 
 export type { PdfToolMode };
 
@@ -41,8 +55,8 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
   const [extractedText, setExtractedText] = useState<string>('');
   const [extractedHtml, setExtractedHtml] = useState<string>('');
   const [copied, setCopied] = useState(false);
-  const [isAiOptimized, setIsAiOptimized] = useState(false);
   const [tableGrid, setTableGrid] = useState<string[][]>([]);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   // Tool specific options
   const [pageRange, setPageRange] = useState<string>('1-2');
@@ -63,9 +77,9 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     setExtractedText('');
     setExtractedHtml('');
     setTableGrid([]);
-    setIsAiOptimized(false);
     setGeneratedBlob(null);
     setPdfImages([]);
+    setPreviewImageUrl(null);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,16 +90,19 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
       setExtractedText('');
       setExtractedHtml('');
       setTableGrid([]);
-      setIsAiOptimized(false);
       setGeneratedBlob(null);
       setPdfImages([]);
 
       const firstFile = selectedFiles[0];
 
+      if (firstFile.type.startsWith('image/')) {
+        setPreviewImageUrl(URL.createObjectURL(firstFile));
+      }
+
       if (activeSubTab === 'pdf-to-word' || activeSubTab === 'pdf-to-excel') {
         setProcessing(true);
         try {
-          // Dynamically parse ANY uploaded PDF without template restrictions
+          // Extract text accurately with layout detection
           const rawText = await extractPdfContentAccurate(firstFile, (status) => {
             setProgressStatus(status);
           });
@@ -95,12 +112,12 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
             return;
           }
 
-          const smartResult = processDocumentIntelligently(rawText, firstFile.name);
-          setExtractedText(smartResult.formattedText);
-          setTableGrid(smartResult.gridMatrix || []);
-          setIsAiOptimized(true);
+          // Run Intelligent Layout Reconstructor
+          const reconstructed = reconstructDocumentLayout(rawText);
+          setExtractedText(reconstructed.formattedDocument);
+          setTableGrid(reconstructed.tableGrid);
           setCompleted(true);
-          showSuccess(lang === 'hi' ? 'दस्तावेज़ सफलतापूर्वक लोड व कन्वर्ट हो गया!' : 'Document converted successfully!');
+          showSuccess(lang === 'hi' ? 'दस्तावेज़ सफलतापूर्वक कन्वर्ट हो गया!' : 'Document converted successfully!');
         } catch (err: any) {
           console.error(err);
           showError(err.message || (lang === 'hi' ? 'PDF पढ़ने में त्रुटि हुई' : 'Failed to read PDF'));
@@ -113,11 +130,10 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         setProgressStatus(lang === 'hi' ? 'Word फ़ाइल पढ़ी जा रही है...' : 'Reading Word file...');
         try {
           const { html, text } = await parseWordDocument(firstFile);
-          const smartResult = processDocumentIntelligently(text, firstFile.name);
+          const reconstructed = reconstructDocumentLayout(text);
           setExtractedHtml(html);
-          setExtractedText(smartResult.formattedText || text || firstFile.name);
-          setTableGrid(smartResult.gridMatrix || []);
-          setIsAiOptimized(true);
+          setExtractedText(reconstructed.formattedDocument || text);
+          setTableGrid(reconstructed.tableGrid);
           setCompleted(true);
           showSuccess(lang === 'hi' ? 'DOCX फ़ाइल सफलतापूर्वक लोड हुई!' : 'DOCX file loaded!');
         } catch (err: any) {
@@ -129,6 +145,14 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         }
       }
     }
+  };
+
+  const handleSmartClean = () => {
+    if (!extractedText.trim()) return;
+    const reconstructed = reconstructDocumentLayout(extractedText);
+    setExtractedText(reconstructed.formattedDocument);
+    setTableGrid(reconstructed.tableGrid);
+    showSuccess(lang === 'hi' ? 'सरकारी पत्र का शुद्ध लेआउट तैयार है!' : 'Official memo formatted!');
   };
 
   const handleAction = async () => {
@@ -212,10 +236,9 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         const rawText = await extractPdfContentAccurate(files[0], (status) => {
           setProgressStatus(status);
         });
-        const smartResult = processDocumentIntelligently(rawText, files[0].name);
-        setExtractedText(smartResult.formattedText);
-        setTableGrid(smartResult.gridMatrix || []);
-        setIsAiOptimized(true);
+        const reconstructed = reconstructDocumentLayout(rawText);
+        setExtractedText(reconstructed.formattedDocument);
+        setTableGrid(reconstructed.tableGrid);
         setCompleted(true);
         showSuccess(lang === 'hi' ? 'दस्तावेज़ तैयार है!' : 'Document ready!');
       } else {
@@ -277,10 +300,9 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
     const originalName = files[0]?.name || 'Data_Table';
     const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
 
-    const smart = processDocumentIntelligently(extractedText, originalName);
-    const rows = tableGrid.length > 0 ? tableGrid : smart.gridMatrix;
+    const rows = tableGrid.length > 0 ? tableGrid : extractedText.split('\n').map(l => l.split(/\||\t/).map(c => c.trim()).filter(Boolean));
 
-    if (rows.length === 0) {
+    if (rows.length === 0 || rows[0].length <= 1) {
       handleDownloadWord();
       return;
     }
@@ -339,36 +361,26 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
         {lang === 'hi' ? 'मुख्य पृष्ठ पर लौटें' : 'Back to Home'}
       </Button>
 
-      <Card className="border-orange-200 shadow-md">
-        <CardHeader className="bg-gradient-to-r from-orange-500 via-amber-500 to-indigo-600 text-white rounded-t-lg">
+      <Card className="border-orange-200 shadow-md overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-orange-500 via-amber-500 to-indigo-600 text-white p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <Brain className="w-6 h-6 text-amber-200" />
-              {lang === 'hi' ? 'ऑल-इन-वन PDF सुइट (Universal File Converter)' : 'Complete All-in-One PDF Suite'}
+              {lang === 'hi' ? 'ऑल-इन-वन PDF व शासकीय पत्र कन्वर्टर' : 'Complete All-in-One PDF Suite'}
             </CardTitle>
             <Badge variant="secondary" className="bg-white/20 text-white border-white/40 text-xs px-2.5 py-1 w-fit">
               <ShieldCheck className="w-3.5 h-3.5 mr-1 text-amber-300" />
-              100% Free & Unaltered Content
+              100% Free & Unaltered Devanagari
             </Badge>
           </div>
           <CardDescription className="text-orange-100 text-sm">
             {lang === 'hi' 
-              ? 'किसी भी नए दस्तावेज़ को अपलोड करें — बिना भाषा या टेक्स्ट बदले असली Word (.docx) व Excel में बदलें' 
-              : 'Upload any document — converts to real Word (.docx) & Excel without changing language or content'}
+              ? 'स्कैन किया हुआ सरकारी पत्र, आदेश या टेबल डालें — बिना कचरा अक्षरों के असली Word (.docx) पाएं' 
+              : 'Upload scanned official orders, letters or tables to get authentic editable Word (.docx)'}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="p-6 space-y-6">
-          {/* Universal Notice */}
-          <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-center gap-2.5 text-emerald-900 text-xs font-semibold">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>
-              {lang === 'hi'
-                ? 'यूनिवर्सल इंजन सक्रिय: कोई भी नई PDF, Word या इमेज फाइल डालें, टेक्स्ट व फॉर्मेट 100% सुरक्षित रहेगा।'
-                : 'Universal Engine Active: Upload any PDF, Word or Image file with 100% content preservation.'}
-            </span>
-          </div>
-
           {/* Mode Selector Tabs */}
           <PdfToolTabs
             lang={lang}
@@ -415,8 +427,8 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
             ) : (
               <p className="text-xs text-gray-500">
                 {lang === 'hi' 
-                  ? (currentTab.isMultiple ? 'एक या एक से अधिक PDF/इमेज फाइलें चुनें' : 'कोई भी PDF, Word, Excel या इमेज फ़ाइल चुनें')
-                  : 'Select any PDF, Word, Excel or image files'}
+                  ? 'Adobe Scan, CamScanner या मोबाइल से खींची गई कोई भी PDF/फोटो अपलोड करें'
+                  : 'Upload any Adobe Scan, CamScanner or photographed PDF'}
               </p>
             )}
           </div>
@@ -433,34 +445,74 @@ export const PdfTools: React.FC<PdfToolsProps> = ({ lang, initialMode = 'pdf-to-
             </div>
           )}
 
-          {/* Live Preview Section */}
-          <PdfPreviewSection
-            lang={lang}
-            extractedText={extractedText}
-            setExtractedText={setExtractedText}
-            tableGrid={tableGrid}
-            isAiOptimized={isAiOptimized}
-            copied={copied}
-            onCopyText={handleCopyText}
-            pdfImages={pdfImages}
-          />
+          {/* Live Preview & Verification Studio */}
+          {extractedText && (
+            <div className="border border-orange-200 rounded-2xl p-5 bg-orange-50/30 space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-orange-900 flex items-center gap-1.5">
+                    <Eye className="w-4 h-4 text-orange-600" />
+                    {lang === 'hi' ? 'दस्तावेज़ लाइव प्रीव्यू व वेरिफिकेशन (Live Preview):' : 'Live Document Preview:'}
+                  </span>
+                  <Badge className="bg-emerald-600 text-white text-[10px] px-2 py-0.5">
+                    ✓ 100% Authentic Hindi
+                  </Badge>
+                </div>
 
-          {/* Action & Download Bar */}
-          <PdfActionBar
-            lang={lang}
-            activeSubTab={activeSubTab}
-            toolTitle={lang === 'hi' ? currentTab.titleHi : currentTab.titleEn}
-            filesLength={files.length}
-            hasExtractedText={!!extractedText}
-            processing={processing}
-            completed={completed}
-            hasGeneratedBlob={!!generatedBlob}
-            onExecute={handleAction}
-            onDownloadDirectBlob={handleDownloadDirectBlob}
-            onDownloadPdf={handleDownloadPdf}
-            onDownloadExcel={handleDownloadExcel}
-            onDownloadWord={handleDownloadWord}
-          />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSmartClean}
+                    className="gap-1.5 text-xs bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 shadow-sm"
+                  >
+                    <Wand2 className="w-3.5 h-3.5 text-indigo-600" />
+                    {lang === 'hi' ? '⚡ लेआउट शुद्ध करें' : 'Auto Format'}
+                  </Button>
+
+                  <Button size="sm" variant="outline" onClick={handleCopyText} className="gap-1.5 text-xs bg-white border-orange-300">
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-orange-600" />}
+                    {copied ? (lang === 'hi' ? 'कॉपी हुआ' : 'Copied') : (lang === 'hi' ? 'कॉपी करें' : 'Copy')}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Editable Text Area with Noto Devanagari */}
+              <Textarea
+                rows={14}
+                value={extractedText}
+                onChange={(e) => setExtractedText(e.target.value)}
+                className="bg-white text-xs sm:text-sm font-serif p-4 border-orange-200 leading-relaxed font-medium whitespace-pre shadow-inner rounded-xl focus-visible:ring-orange-500"
+              />
+
+              {/* Download Buttons Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <p className="text-xs text-gray-500">
+                  {lang === 'hi' ? '✓ आप ऊपर बॉक्स में किसी भी शब्द या तारीख को सीधे एडिट कर सकते हैं।' : 'You can edit text directly in the box above.'}
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={handleDownloadWord}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 font-bold text-xs sm:text-sm shadow-md rounded-xl px-5 py-2.5"
+                  >
+                    <Download className="w-4 h-4" />
+                    {lang === 'hi' ? 'MS Word (.docx) डाउनलोड करें' : 'Download Word (.docx)'}
+                  </Button>
+
+                  {tableGrid.length > 0 && (
+                    <Button
+                      onClick={handleDownloadExcel}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-bold text-xs sm:text-sm shadow-md rounded-xl px-4 py-2.5"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      {lang === 'hi' ? 'MS Excel (.xls)' : 'Download Excel'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
