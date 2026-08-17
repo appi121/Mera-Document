@@ -1,79 +1,108 @@
 /**
- * Advanced Soft-Contrast Image Preprocessor for Hindi Devanagari & English Documents.
- * Preserves continuous stroke connectivity, Hindi shirorekha, matras, and dots
- * without harsh binary clipping that creates symbol artifacts.
+ * Advanced Devanagari & English Image Preprocessor for OCR.
+ * Bounds image dimensions to safe canvas limits (max 2200px) to prevent memory crashes
+ * and returns valid, clean high-contrast image data for Tesseract.js.
  */
 export const preprocessImageForOcr = (imageSource: string): Promise<string> => {
   return new Promise((resolve) => {
+    if (!imageSource || typeof imageSource !== 'string') {
+      resolve('');
+      return;
+    }
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
+
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        resolve(imageSource);
-        return;
-      }
+      try {
+        const width = img.naturalWidth || img.width;
+        const height = img.naturalHeight || img.height;
 
-      // Upscale DPI to 3.0x for crisp recognition of Devanagari ligatures
-      const maxDim = Math.max(img.width, img.height);
-      const scale = maxDim < 1400 ? 3.0 : maxDim < 2200 ? 2.0 : 1.5;
-
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-      const w = canvas.width;
-      const h = canvas.height;
-
-      // 1. Convert to high-definition luminance map
-      const gray = new Float32Array(w * h);
-      let minLuma = 255;
-      let maxLuma = 0;
-
-      for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-        // High accuracy luminance
-        const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        gray[j] = luma;
-        if (luma < minLuma) minLuma = luma;
-        if (luma > maxLuma) maxLuma = luma;
-      }
-
-      // 2. Soft Sigmoid Contrast Stretching (Keeps ink black and cleans yellow/grey background)
-      const range = Math.max(1, maxLuma - minLuma);
-      const midpoint = minLuma + range * 0.55;
-
-      for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-        const val = gray[j];
-        
-        // Soft curve that enhances text strokes while gently removing background shadow
-        let normalized = (val - minLuma) / range;
-        
-        // Enhance ink density without breaking thin matras
-        if (val < midpoint) {
-          normalized = Math.pow(normalized, 1.4); // Darken text
-        } else {
-          normalized = Math.min(1.0, normalized * 1.15); // Lighten paper background
+        if (!width || !height) {
+          resolve(imageSource);
+          return;
         }
 
-        const finalVal = Math.max(0, Math.min(255, Math.round(normalized * 255)));
+        // Safe target bounds for OCR (optimal range: 1400px to 2200px)
+        const MAX_DIM = 2200;
+        const MIN_DIM = 1200;
+        const maxCurrent = Math.max(width, height);
 
-        data[i] = finalVal;
-        data[i + 1] = finalVal;
-        data[i + 2] = finalVal;
-        data[i + 3] = 255;
+        let scale = 1.0;
+        if (maxCurrent < MIN_DIM) {
+          scale = Math.min(2.0, MIN_DIM / maxCurrent);
+        } else if (maxCurrent > MAX_DIM) {
+          scale = MAX_DIM / maxCurrent;
+        }
+
+        const targetW = Math.max(100, Math.round(width * scale));
+        const targetH = Math.max(100, Math.round(height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        if (!ctx) {
+          resolve(imageSource);
+          return;
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, targetW, targetH);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+
+        const imageData = ctx.getImageData(0, 0, targetW, targetH);
+        const data = imageData.data;
+        const len = data.length;
+
+        // 1. Calculate luminance histogram & Otsu/Adaptive cutoff
+        let totalLuma = 0;
+        const totalPixels = targetW * targetH;
+
+        for (let i = 0; i < len; i += 4) {
+          // Standard perception luminance
+          const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          totalLuma += luma;
+        }
+
+        const avgLuma = totalLuma / totalPixels;
+        const cutoff = Math.max(140, Math.min(210, avgLuma * 0.85));
+
+        // 2. High contrast stroke reinforcement for Hindi Devanagari text
+        for (let i = 0; i < len; i += 4) {
+          const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          let finalVal = 255;
+
+          if (luma < cutoff) {
+            // Darken ink strokes
+            finalVal = luma < 100 ? 0 : Math.max(0, Math.round(luma * 0.45));
+          }
+
+          data[i] = finalVal;
+          data[i + 1] = finalVal;
+          data[i + 2] = finalVal;
+          data[i + 3] = 255;
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        const resultDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        if (resultDataUrl && resultDataUrl.length > 500 && resultDataUrl.startsWith('data:image/')) {
+          resolve(resultDataUrl);
+        } else {
+          resolve(imageSource);
+        }
+      } catch (err) {
+        console.warn('Preprocessing fallback due to canvas error:', err);
+        resolve(imageSource);
       }
-
-      ctx.putImageData(imageData, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
     };
 
-    img.onerror = () => {
+    img.onerror = (err) => {
+      console.warn('Image load error during preprocessing:', err);
       resolve(imageSource);
     };
 

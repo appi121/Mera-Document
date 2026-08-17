@@ -75,6 +75,9 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     try {
       const targetSource = file ? URL.createObjectURL(file) : previewUrl || '';
       const enhancedImageDataUrl = await preprocessImageForOcr(targetSource);
+      const finalImage = (enhancedImageDataUrl && enhancedImageDataUrl.startsWith('data:image/')) 
+        ? enhancedImageDataUrl 
+        : targetSource;
 
       setStatusText(lang === 'hi' ? 'AI भाषा मॉडल (हिंदी + इंग्लिश) चालू हो रहा है...' : 'Initializing OCR Engine...');
 
@@ -88,12 +91,12 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
       });
 
       await worker.setParameters({
-        tessedit_pageseg_mode: '6' as any,
+        tessedit_pageseg_mode: '3' as any,
       });
 
       setStatusText(lang === 'hi' ? 'दस्तावेज़ की पंक्तियों व लेआउट का संरेखण हो रहा है...' : 'Aligning document layout...');
       
-      const { data } = await worker.recognize(enhancedImageDataUrl);
+      const { data } = await worker.recognize(finalImage);
       await worker.terminate();
 
       const result = formatOcrDataWithLayout(data);
@@ -112,9 +115,9 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
         );
         showError(lang === 'hi' ? 'साफ़ टेक्स्ट नहीं मिला!' : 'No clear text found!');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('OCR Error:', err);
-      showError(lang === 'hi' ? 'OCR स्कैनिंग में त्रुटि हुई।' : 'Failed to scan image.');
+      showError(err.message || (lang === 'hi' ? 'OCR स्कैनिंग में त्रुटि हुई।' : 'Failed to scan image.'));
     } finally {
       setLoading(false);
       setStatusText('');
@@ -132,7 +135,6 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
     });
     setStructuredTableData(updated);
 
-    // Update confidence to 100 since user manually verified/edited it
     const updatedConf = cellConfidences.map((row, r) => {
       if (r === rIdx) {
         const newRow = [...row];
@@ -245,7 +247,6 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
         </CardHeader>
 
         <CardContent className="p-6 space-y-6">
-          {/* Warnings / Verification Alerts */}
           {warnings.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 text-amber-900">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -263,7 +264,6 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Upload Column */}
             <div className="lg:col-span-5 space-y-4">
               <div className="border-2 border-dashed border-orange-300 bg-orange-50/40 rounded-2xl p-6 text-center cursor-pointer relative hover:bg-orange-50 transition-colors min-h-[280px] flex flex-col justify-center items-center overflow-hidden">
                 <input
@@ -309,7 +309,6 @@ export const OcrExtractor: React.FC<OcrExtractorProps> = ({ lang, onBack }) => {
               </Button>
             </div>
 
-            {/* Right Output Column */}
             <div className="lg:col-span-7 space-y-3">
               <Tabs defaultValue="table-view" className="w-full">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">

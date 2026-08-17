@@ -45,33 +45,40 @@ export const downloadWordDoc = async (
     );
   } catch (err) {
     console.error('Failed to generate DOCX:', err);
-    // Fallback plain text download if DOCX generation encounters an error
     downloadFile(textContent, filename.replace(/\.docx?$/i, '.txt'), 'text/plain;charset=utf-8');
   }
 };
 
-/**
- * Generates a clean, populated real PDF blob using jsPDF engine with zero blank pages.
- */
 export const generateSamplePdfBlob = (title: string, textContent: string): Blob => {
   return generatePdfFromContent(title, textContent);
 };
 
 /**
- * Renders a PDF page onto an offscreen HTML5 Canvas at 3.0x high-DPI resolution for deep neural Hindi Devanagari OCR
+ * Renders a PDF page onto an offscreen HTML5 Canvas with safe dimensions (scale 2.0x, max 2000px)
  */
 const renderPdfPageToCanvas = async (pdfPage: any): Promise<string> => {
-  const viewport = pdfPage.getViewport({ scale: 3.0 });
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  canvas.height = viewport.height;
-  canvas.width = viewport.width;
+  try {
+    const unscaledViewport = pdfPage.getViewport({ scale: 1.0 });
+    // Scale factor keeping max dimension around 1800-2000px
+    const maxDimension = Math.max(unscaledViewport.width, unscaledViewport.height);
+    const safeScale = maxDimension > 0 ? Math.min(2.2, 1900 / maxDimension) : 1.8;
 
-  if (context) {
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    await pdfPage.render({ canvasContext: context, viewport }).promise;
-    return canvas.toDataURL('image/png');
+    const viewport = pdfPage.getViewport({ scale: Math.max(1.2, safeScale) });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+
+    if (context) {
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      await pdfPage.render({ canvasContext: context, viewport }).promise;
+      return canvas.toDataURL('image/jpeg', 0.95);
+    }
+  } catch (err) {
+    console.error('Error rendering PDF page to canvas:', err);
   }
   return '';
 };
@@ -87,7 +94,7 @@ interface PdfTextItem {
 /**
  * Real PDF Text & Scanned OCR Extractor:
  * 1. Checks if PDF contains vector text with spatial layout.
- * 2. If scanned or photo PDF -> runs neural Tesseract.js (Hindi + English) with high-DPI adaptive preprocessing and artifact cleanup.
+ * 2. If scanned or photo PDF -> runs neural Tesseract.js (Hindi + English) safely.
  */
 export const extractPdfContentAccurate = async (
   file: File, 
@@ -125,7 +132,6 @@ export const extractPdfContentAccurate = async (
         }
       });
 
-      // Check if real Unicode Hindi/English text layer is present
       const totalChars = items.reduce((acc, it) => acc + it.str.length, 0);
       const hasMeaningfulText = totalChars > 40 && items.some(it => /[\u0900-\u097F\w]/.test(it.str));
 
@@ -182,9 +188,8 @@ export const extractPdfContentAccurate = async (
 
     const directExtracted = pageOutputs.join('\n\n').trim();
 
-    // If scanned document or poor vector text, run real high-res Tesseract OCR
     if (isScannedPdf || !directExtracted || directExtracted.length < 30) {
-      if (onProgress) onProgress('स्कैन/फोटो PDF: AI डीप विजन OCR (हिंदी + इंग्लिश) 300+ DPI पर प्रारंभ...');
+      if (onProgress) onProgress('स्कैन/फोटो PDF: AI डीप विजन OCR (हिंदी + इंग्लिश) प्रारंभ...');
       
       let ocrText = '';
       const worker = await createWorker(['hin', 'eng'], 1, {
@@ -196,24 +201,26 @@ export const extractPdfContentAccurate = async (
         }
       });
 
-      // PSM 3: Fully automatic page segmentation without OSD (ideal for complex official memos & letters)
       await worker.setParameters({
         tessedit_pageseg_mode: '3' as any,
       });
 
       for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
-        if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का हाई-DPI OCR स्कैन किया जा रहा है...`);
+        if (onProgress) onProgress(`पन्ना ${i} / ${pdf.numPages} का OCR स्कैन किया जा रहा है...`);
         const page = await pdf.getPage(i);
         const rawCanvasDataUrl = await renderPdfPageToCanvas(page);
         
-        const preprocessedDataUrl = await preprocessImageForOcr(rawCanvasDataUrl);
+        if (rawCanvasDataUrl && rawCanvasDataUrl.startsWith('data:image/')) {
+          const preprocessedDataUrl = await preprocessImageForOcr(rawCanvasDataUrl);
+          const imageToRecognize = preprocessedDataUrl || rawCanvasDataUrl;
 
-        if (preprocessedDataUrl) {
-          const { data } = await worker.recognize(preprocessedDataUrl);
-          const pageFormatted = formatOcrDataWithLayout(data);
-          const cleanedText = cleanDevanagariOcrText(pageFormatted.formattedText);
-          if (cleanedText.trim()) {
-            ocrText += cleanedText.trim() + '\n\n';
+          if (imageToRecognize && imageToRecognize.startsWith('data:image/')) {
+            const { data } = await worker.recognize(imageToRecognize);
+            const pageFormatted = formatOcrDataWithLayout(data);
+            const cleanedText = cleanDevanagariOcrText(pageFormatted.formattedText);
+            if (cleanedText.trim()) {
+              ocrText += cleanedText.trim() + '\n\n';
+            }
           }
         }
       }
